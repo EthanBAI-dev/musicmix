@@ -12,6 +12,8 @@ data/
 
 # 例外：单元测试用的极小固定资产
 !tests/assets/**
+# 例外：前端演示音频（脚本合成，共约 2MB，随 python -m scripts.make_demo_stems 重新生成）
+!web/demo/**
 
 # === 模型权重 ===
 checkpoints/

@@ -2,7 +2,7 @@
 
 > 上传一首歌 → 拆成人声/鼓/贝斯/其他四轨 → 自动分析 BPM、调性、和弦、曲式结构 → 打上风格/情绪/乐器标签 → 检索相似歌曲 → 在浏览器里重新混音。
 
-**当前状态：✅ M0 工程地基完成（评测框架 + 108 条单测）→ 进入 M1（分离 baseline）**
+**当前状态：✅ M0 工程地基（评测框架 + 108 条单测）· ✅ M2 混音台可用 → 下一步 M1（分离 baseline）**
 
 ## 快速开始
 
@@ -14,6 +14,25 @@ python -m scripts.check_env                    # 环境自检（含 MPS 实测�
 python -m pytest tests/ -q                     # 108 条单测
 python -m scripts.run_separation_eval --synthetic 6 --model oracle   # 评测框架自检，不需要数据集
 ```
+
+## 打开混音台网页
+
+```bash
+python -m scripts.make_demo_stems && python -m http.server 8123
+```
+
+然后打开 <http://localhost:8123/web/index.html>。
+
+**页面能做什么**
+- 四轨播放：每轨独立 音量 / 静音 M / 独奏 S / 声像 / 三段 EQ，所有增益变化都做平滑，无爆音
+- 时间轴：曲式段落色块、和弦标签、小节线与拍点网格，点击定位
+- 频谱分析（对数频率轴）、逐轨电平表、波形图
+- 导出 WAV（`OfflineAudioContext` 离线渲染，20 秒曲子约 130ms）
+- 快捷键：空格播放/暂停、←/→ 前后 2 秒、Home 回到开头
+- 载入自己的音频：文件名含 `vocals` / `drums` / `bass` / `other` 即可（**正是 demucs 的默认输出命名**，P1 产出的 stem 可以直接拖进来）
+
+演示音频由 `scripts/make_demo_stems.py` 合成（20 秒 / 96 BPM / A 小调 / Am-F-C-G）。
+它的 BPM、拍点、和弦、曲式**全部是已知真值**，所以将来会作为 P3 拍点/和弦/结构模型的第一个测试样例。
 
 ---
 

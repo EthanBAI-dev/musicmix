@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>音乐理解与智能混音助手</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">♪</span>
+    <div>
+      <h1>音乐理解与智能混音助手</h1>
+      <p class="sub">音源分离 · 音乐分析 · 自动标签 · 相似检索 · 浏览器混音</p>
+    </div>
+  </div>
+  <div class="badges">
+    <span class="pill pill-ok">M0 评测框架 ✅</span>
+    <span class="pill">M2 混音台 · 进行中</span>
+  </div>
+</header>
+
+<main>
+
+<!-- ==================== 混音台 ==================== -->
+<section class="panel">
+  <div class="panel-head">
+    <h2>四轨混音台</h2>
+    <div class="src-info">
+      <span id="srcName">合成演示曲</span>
+      <label class="btn btn-ghost">
+        载入自己的音频
+        <input type="file" id="fileInput" accept="audio/*" multiple hidden>
+      </label>
+      <button class="btn btn-ghost" id="resetDemo">恢复演示曲</button>
+    </div>
+  </div>
+
+  <div id="loadState" class="loading">正在解码音频…</div>
+
+  <div id="mixer" hidden>
+
+    <!-- 走带控制 -->
+    <div class="transport">
+      <button class="btn btn-play" id="playBtn" aria-label="播放/暂停">
+        <span id="playIcon">▶</span>
+      </button>
+      <button class="btn btn-ghost" id="stopBtn">■</button>
+      <button class="btn btn-ghost" id="loopBtn" aria-pressed="false">↻ 循环</button>
+
+      <div class="time"><span id="curTime">0:00.0</span> <span class="dim">/ <span id="durTime">0:00.0</span></span></div>
+
+      <div class="meta">
+        <span class="kv"><b id="bpmVal">–</b><i>BPM</i></span>
+        <span class="kv"><b id="keyVal">–</b><i>调性</i></span>
+        <span class="kv"><b id="sigVal">–</b><i>拍号</i></span>
+        <span class="kv"><b id="barVal">–</b><i>小节</i></span>
+      </div>
+
+      <div class="master">
+        <label for="masterVol">主音量</label>
+        <input type="range" id="masterVol" min="0" max="1.5" step="0.01" value="1">
+        <span class="val" id="masterVolVal">100%</span>
+      </div>
+
+      <button class="btn btn-accent" id="exportBtn">导出 WAV</button>
+    </div>
+
+    <!-- 时间轴：段落 / 和弦 / 小节线 -->
+    <div class="timeline-wrap">
+      <canvas id="timeline" height="76"></canvas>
+      <div class="timeline-legend">
+        <span><i class="sw sw-intro"></i>intro</span>
+        <span><i class="sw sw-verse"></i>verse</span>
+        <span><i class="sw sw-chorus"></i>chorus</span>
+        <span class="dim">粗线 = 小节线（downbeat）· 细线 = 拍点 · 点击定位</span>
+      </div>
+    </div>
+
+    <!-- 四条音轨 -->
+    <div class="tracks" id="tracks"></div>
+
+    <!-- 频谱 -->
+    <div class="spectrum-wrap">
+      <canvas id="spectrum" height="120"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 分析结果 ==================== -->
+<section class="panel">
+  <div class="panel-head">
+    <h2>分析结果</h2>
+    <span class="tag" id="analysisSrc">—</span>
+  </div>
+  <div class="analysis-grid" id="analysisGrid"></div>
+  <p class="note" id="analysisNote"></p>
+</section>
+
+<!-- ==================== 项目状态 ==================== -->
+<section class="panel">
+  <div class="panel-head">
+    <h2>项目状态</h2>
+    <span class="tag">M0 自检 · 2026-07-29</span>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>评测框架锚点</h3>
+      <p class="card-sub">三个理论值已知的参照物，用来验证评测代码本身没写错</p>
+      <table class="mini" id="anchorTable">
+        <thead><tr><th>锚点</th><th>uSDR 平均</th><th>作用</th></tr></thead>
+        <tbody><tr><td colspan="3" class="dim">加载中…</td></tr></tbody>
+      </table>
+      <p class="card-foot">真实模型的成绩必须落在下界和上界之间 —— 落到外面就是代码错了。</p>
+    </div>
+
+    <div class="card">
+      <h3>单元测试</h3>
+      <div class="big-num"><b id="testCount">108</b><span>passed</span></div>
+      <ul class="ticks">
+        <li>全零估计 → uSDR 恰为 <b>0.00 dB</b></li>
+        <li>构造 SNR=7dB 误差 → SDR 恰为 <b>7.00 dB</b></li>
+        <li>调阈值 → Macro-F1 <b>0.50→1.00</b>，mAP 恒为 1.00</li>
+        <li>+0.15 dB 的微小提升能被配对检验检出</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>里程碑</h3>
+      <ul class="roadmap" id="roadmap"></ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>数据与许可：MUSDB18-HQ 与 MTG-Jamendo 均限非商业研究/学术使用。本页演示音频为脚本合成，非真实唱片。</p>
+</footer>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
