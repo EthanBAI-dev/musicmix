@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "music-understanding-remix"
+version = "0.1.0"
+description = "音乐理解与智能混音助手：音源分离 / 音乐分析 / 自动标签 / 相似检索 / 浏览器混音"
+requires-python = ">=3.10,<3.12"
+
+# P0 地基所需的最小依赖集。
+# 后续阶段的重依赖（demucs / madmom / all-in-one / faiss / transformers）
+# 单独放在 optional-dependencies 里按需装，避免一开始就把环境搞脏。
+dependencies = [
+    "numpy",
+    "scipy",
+    "soundfile",
+    "librosa",
+    "pyloudnorm",
+    "scikit-learn",
+    "pandas",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+# 分离评测（museval 是 MUSDB 官方口径，不可用自己实现替代）
+eval = ["museval", "musdb", "mir_eval"]
+# 模型推理与训练
+torch = ["torch", "torchaudio"]
+# P1/P2 音源分离
+sep = ["demucs"]
+# P4 标签
+tag = ["transformers", "wandb"]
+# P5 检索
+retrieval = ["faiss-cpu"]
+# P6 服务
+service = ["fastapi", "uvicorn", "celery", "redis", "python-multipart"]
+dev = ["pytest", "pytest-cov", "ruff", "matplotlib"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "slow: 需要真实数据集或长时间运行，默认跳过（用 -m slow 单独跑）",
+    "needs_musdb: 需要本地已下载 MUSDB18-HQ",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
