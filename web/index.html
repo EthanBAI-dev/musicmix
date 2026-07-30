@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>音乐理解与智能混音助手</title>
-<link rel="stylesheet" href="styles.css">
+<!-- ?v= 只为一次性冲掉浏览器里的旧缓存；日常开发请用 python -m scripts.serve，它对所有响应发 no-store -->
+<link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
 
@@ -38,6 +39,18 @@
       <button class="btn btn-ghost" id="resetDemo">恢复演示曲</button>
     </div>
   </div>
+
+  <!-- 失败案例听审 -->
+  <div class="cases-bar" id="casesBar" hidden>
+    <label for="caseSelect">P1 失败案例听审</label>
+    <select id="caseSelect"></select>
+    <div class="ab" id="abToggle">
+      <button class="ab-btn" data-src="est" aria-pressed="true">分离结果</button>
+      <button class="ab-btn" data-src="truth" aria-pressed="false">真值</button>
+    </div>
+    <span class="dim" id="caseHint">切换时保持播放位置不变，耳朵能直接对上差别</span>
+  </div>
+  <div class="case-diag" id="caseDiag" hidden></div>
 
   <div id="loadState" class="loading">正在解码音频…</div>
 
@@ -145,6 +158,6 @@
 
 <div id="toast" class="toast" hidden></div>
 
-<script src="app.js"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

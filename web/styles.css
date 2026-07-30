@@ -81,6 +81,49 @@ main { max-width: 1240px; margin: 0 auto; padding: 24px 20px 60px; }
 
 .loading { color: var(--dim); padding: 30px 0; text-align: center; font-size: 13px; }
 
+/* ---------------- 失败案例听审 ---------------- */
+.cases-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 11px 14px; margin-bottom: 12px;
+  background: #1a1520; border: 1px solid #3a2b3f; border-radius: 10px;
+  font-size: 12.5px;
+}
+.cases-bar > label { color: var(--dim); flex: none; }
+.cases-bar select {
+  font: inherit; font-size: 12.5px; color: var(--text);
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 7px; padding: 5px 9px; max-width: 380px; cursor: pointer;
+}
+.ab { display: flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+/* 刻意不复用 .btn-sm —— 那条规则的选中态用了 var(--c)，而 --c 只在音轨行里定义，
+   在这里会解析失败让背景变透明。A/B 按钮自成一套，避免和音轨样式纠缠。
+   appearance: none 是给 <button> 去掉原生控件外观的常规写法，留着更保险。 */
+.ab-btn {
+  appearance: none; -webkit-appearance: none;
+  font: inherit; font-size: 12px; padding: 5px 13px; cursor: pointer;
+  border: none; background: transparent; color: var(--dim);
+  transition: background .12s, color .12s;
+}
+.ab-btn:hover { background: #232b38; color: var(--text); }
+.ab-btn + .ab-btn { border-left: 1px solid var(--line); }
+.ab-btn[aria-pressed="true"] { background: var(--accent); color: #06222c; font-weight: 600; }
+.ab-btn[aria-pressed="true"]:hover { background: #6ed6f5; color: #06222c; }
+
+.case-diag {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 8px; margin-bottom: 14px;
+}
+.diag {
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-left: 3px solid var(--c); border-radius: 8px; padding: 9px 11px;
+}
+.diag b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.diag .stem { font-size: 11px; color: var(--dim); }
+.diag .why { font-size: 10.5px; margin-top: 3px; }
+.why-artifact { color: #d9a441; }
+.why-real { color: #e5646d; }
+.why-ok { color: var(--ok); }
+
 /* ---------------- 按钮 ---------------- */
 .btn {
   font: inherit; font-size: 13px;

@@ -18,10 +18,14 @@ python -m scripts.run_separation_eval --synthetic 6 --model oracle   # 评测框
 ## 打开混音台网页
 
 ```bash
-python -m scripts.make_demo_stems && python -m http.server 8123
+python -m scripts.make_demo_stems      # 生成演示曲（只需一次）
+python -m scripts.serve                # 开发用服务器，禁用缓存
 ```
 
 然后打开 <http://localhost:8123/web/index.html>。
+
+> 用 `scripts.serve` 而不是 `python -m http.server`：后者只发 `Last-Modified`，
+> 浏览器会缓存 css/js，改完刷新看不到变化，且症状极具迷惑性（详见 DEVLOG 2026-07-30）。
 
 **页面能做什么**
 - 四轨播放：每轨独立 音量 / 静音 M / 独奏 S / 声像 / 三段 EQ，所有增益变化都做平滑，无爆音
@@ -30,6 +34,8 @@ python -m scripts.make_demo_stems && python -m http.server 8123
 - 导出 WAV（`OfflineAudioContext` 离线渲染，20 秒曲子约 130ms）
 - 快捷键：空格播放/暂停、←/→ 前后 2 秒、Home 回到开头
 - 载入自己的音频：文件名含 `vocals` / `drums` / `bass` / `other` 即可（**正是 demucs 的默认输出命名**，P1 产出的 stem 可以直接拖进来）
+- **P1 失败案例听审**：下拉选案例，一键在「分离结果 / 真值」间 A/B（快捷键 `Tab`），
+  切换时保持播放位置不变；每轨标注 cSDR 并区分「真实失败」与「指标假象」
 
 演示音频由 `scripts/make_demo_stems.py` 合成（20 秒 / 96 BPM / A 小调 / Am-F-C-G）。
 它的 BPM、拍点、和弦、曲式**全部是已知真值**，所以将来会作为 P3 拍点/和弦/结构模型的第一个测试样例。

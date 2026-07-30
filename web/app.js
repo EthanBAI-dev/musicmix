@@ -662,6 +662,130 @@ function redrawAll() {
   drawFrame();
 }
 
+/* ============================ 失败案例听审 ============================ */
+
+/* 核心是 A/B：分离结果与真值用同一套 UI、同一个播放位置，
+ * 切换时只换 AudioBuffer 不重建音频图，位置连续 —— 耳朵才对得上差别。 */
+
+const CASES = { manifest: null, current: null, source: 'est', buffers: { est: {}, truth: {} } };
+
+async function loadCaseManifest() {
+  try {
+    const r = await fetch('cases/manifest.json');
+    if (!r.ok) return;
+    CASES.manifest = await r.json();
+  } catch (_) { return; }
+
+  const sel = $('caseSelect');
+  sel.innerHTML = '<option value="">— 合成演示曲 —</option>' + CASES.manifest.cases
+    .map((c) => `<option value="${c.id}">${c.tag === 'worst' ? '⚠️' : '✅'} `
+              + `${c.csdr_mean.toFixed(2)} dB — ${c.track}</option>`).join('');
+  $('casesBar').hidden = false;
+
+  sel.addEventListener('change', (e) => {
+    if (!e.target.value) { CASES.current = null; $('caseDiag').hidden = true; loadDemo(); }
+    else loadCase(e.target.value);
+  });
+
+  for (const btn of document.querySelectorAll('.ab-btn')) {
+    btn.addEventListener('click', () => switchSource(btn.dataset.src));
+  }
+}
+
+async function loadCase(id) {
+  const c = CASES.manifest.cases.find((x) => x.id === id);
+  if (!c) return;
+
+  $('loadState').hidden = false;
+  $('loadState').textContent = `正在加载「${c.track}」的分离结果与真值…`;
+  $('mixer').hidden = true;
+  stop();
+  ensureContext();
+
+  const fetchBuf = async (url) =>
+    S.ctx.decodeAudioData(await fetch(url).then((r) => r.arrayBuffer()));
+
+  try {
+    const est = {}, truth = {};
+    await Promise.all(STEMS.flatMap(({ id: s }) => [
+      c.files[s] ? fetchBuf(c.files[s]).then((b) => { est[s] = b; }) : null,
+      c.files[`${s}_truth`] ? fetchBuf(c.files[`${s}_truth`]).then((b) => { truth[s] = b; }) : null,
+    ].filter(Boolean)));
+
+    CASES.current = c;
+    CASES.buffers = { est, truth };
+    CASES.source = 'est';
+    syncAbButtons();
+
+    buildTrackRows();
+    for (const { id: s } of STEMS) {
+      const t = S.tracks[s];
+      Object.assign(t, buildTrackNodes(s));
+      t.buffer = est[s] || null;
+      t.panner.pan.value = t.pan;
+    }
+
+    S.analysis = null;                    // 真实曲目还没有分析结果，等 P3
+    S.srcLabel = `${c.tag === 'worst' ? '失败案例' : '对照'}：${c.track}（cSDR ${c.csdr_mean} dB）`;
+    finishLoad();
+    renderCaseDiag(c);
+  } catch (err) {
+    $('loadState').textContent = `加载失败：${err.message}`;
+  }
+}
+
+/** 切换分离结果 / 真值。**保持播放位置和播放状态**，这是 A/B 的关键。 */
+function switchSource(which) {
+  if (!CASES.current || which === CASES.source) return;
+  const bufs = CASES.buffers[which];
+  if (!bufs || !Object.keys(bufs).length) { toast('该案例没有这一组音频'); return; }
+
+  const wasPlaying = S.playing;
+  const pos = currentPosition();
+
+  if (wasPlaying) { S.gen++; stopSources(); S.playing = false; }
+  for (const { id: s } of STEMS) S.tracks[s].buffer = bufs[s] || null;
+
+  CASES.source = which;
+  syncAbButtons();
+
+  S.offset = Math.min(pos, S.duration);
+  for (const { id: s } of STEMS) if (S.tracks[s].buffer) renderWaveform(S.tracks[s]);
+  drawFrame();
+  if (wasPlaying) play();
+}
+
+function syncAbButtons() {
+  for (const btn of document.querySelectorAll('.ab-btn')) {
+    btn.setAttribute('aria-pressed', String(btn.dataset.src === CASES.source));
+  }
+  $('caseHint').textContent = CASES.source === 'est'
+    ? '正在听：分离结果 —— 切到「真值」对比'
+    : '正在听：真值（数据集自带的干净声部）';
+}
+
+/** 逐声部标注：低 SDR 是「真实算法失败」还是「该轨本来就很轻」造成的指标假象。 */
+function renderCaseDiag(c) {
+  const el = $('caseDiag');
+  el.innerHTML = STEMS.map(({ id: s, zh, color }) => {
+    const d = c.stems[s];
+    let cls = 'why-ok', why = '正常';
+    if (d.quiet) {
+      cls = 'why-artifact';
+      why = `指标假象：该轨仅 ${d.energy_rel_db} dB（中位数 ${d.energy_median_db}）`;
+    } else if (d.csdr < 5) {
+      cls = 'why-real';
+      why = `真实失败：能量 ${d.energy_rel_db} dB 不算轻`;
+    }
+    return `<div class="diag" style="--c:${color}">
+      <div class="stem">${s} · ${zh}</div>
+      <b>${d.csdr.toFixed(2)} dB</b>
+      <div class="why ${cls}">${why}</div>
+    </div>`;
+  }).join('');
+  el.hidden = false;
+}
+
 /* ============================ 分析面板 ============================ */
 
 function renderAnalysisPanel() {
@@ -863,6 +987,11 @@ function bindGlobal() {
     if (e.code === 'ArrowLeft')  seek(currentPosition() - 2);
     if (e.code === 'ArrowRight') seek(currentPosition() + 2);
     if (e.code === 'Home') seek(0);
+    // Tab 一键 A/B —— 听审时最常用的操作，不该去点鼠标
+    if (e.code === 'Tab' && CASES.current) {
+      e.preventDefault();
+      switchSource(CASES.source === 'est' ? 'truth' : 'est');
+    }
   });
 
   let resizeTimer = null;
@@ -882,5 +1011,6 @@ function bindGlobal() {
 bindGlobal();
 renderRoadmap();
 loadDashboard();
+loadCaseManifest();
 loadDemo();
 requestAnimationFrame(tick);

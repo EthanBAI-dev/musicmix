@@ -1,0 +1,306 @@
+{
+  "note": "P1 htdemucs 在 MUSDB18-HQ test 上的失败/对照案例。mixture / 分离结果 / 真值取自**同一个时间窗口**（见 pick_window）。mp3 256kbps —— 分离伪影远大于编码伪影，不影响听辨；严格听审请用 results/failure_cases/ 下的原始 wav。",
+  "cases": [
+    {
+      "id": "worst_PR - Oh No",
+      "track": "PR - Oh No",
+      "tag": "worst",
+      "csdr_mean": 1.86,
+      "stems": {
+        "vocals": {
+          "csdr": -0.01,
+          "energy_rel_db": -17.1,
+          "energy_median_db": -6.8,
+          "quiet": true
+        },
+        "drums": {
+          "csdr": 6.7,
+          "energy_rel_db": -0.6,
+          "energy_median_db": -5.6,
+          "quiet": false
+        },
+        "bass": {
+          "csdr": 0.01,
+          "energy_rel_db": -4.7,
+          "energy_median_db": -7.3,
+          "quiet": false
+        },
+        "other": {
+          "csdr": 0.72,
+          "energy_rel_db": -8.6,
+          "energy_median_db": -6.1,
+          "quiet": false
+        }
+      },
+      "files": {
+        "vocals": "cases/worst_PR - Oh No/vocals.mp3",
+        "vocals_truth": "cases/worst_PR - Oh No/vocals_truth.mp3",
+        "drums": "cases/worst_PR - Oh No/drums.mp3",
+        "drums_truth": "cases/worst_PR - Oh No/drums_truth.mp3",
+        "bass": "cases/worst_PR - Oh No/bass.mp3",
+        "bass_truth": "cases/worst_PR - Oh No/bass_truth.mp3",
+        "other": "cases/worst_PR - Oh No/other.mp3",
+        "other_truth": "cases/worst_PR - Oh No/other_truth.mp3",
+        "mixture": "cases/worst_PR - Oh No/mixture.mp3"
+      }
+    },
+    {
+      "id": "worst_AM Contra - Heart Peripheral",
+      "track": "AM Contra - Heart Peripheral",
+      "tag": "worst",
+      "csdr_mean": 2.26,
+      "stems": {
+        "vocals": {
+          "csdr": 10.33,
+          "energy_rel_db": -6.5,
+          "energy_median_db": -6.8,
+          "quiet": false
+        },
+        "drums": {
+          "csdr": 7.84,
+          "energy_rel_db": -3.9,
+          "energy_median_db": -5.6,
+          "quiet": false
+        },
+        "bass": {
+          "csdr": -9.59,
+          "energy_rel_db": -8.3,
+          "energy_median_db": -7.3,
+          "quiet": false
+        },
+        "other": {
+          "csdr": 0.46,
+          "energy_rel_db": -6.5,
+          "energy_median_db": -6.1,
+          "quiet": false
+        }
+      },
+      "files": {
+        "vocals": "cases/worst_AM Contra - Heart Peripheral/vocals.mp3",
+        "vocals_truth": "cases/worst_AM Contra - Heart Peripheral/vocals_truth.mp3",
+        "drums": "cases/worst_AM Contra - Heart Peripheral/drums.mp3",
+        "drums_truth": "cases/worst_AM Contra - Heart Peripheral/drums_truth.mp3",
+        "bass": "cases/worst_AM Contra - Heart Peripheral/bass.mp3",
+        "bass_truth": "cases/worst_AM Contra - Heart Peripheral/bass_truth.mp3",
+        "other": "cases/worst_AM Contra - Heart Peripheral/other.mp3",
+        "other_truth": "cases/worst_AM Contra - Heart Peripheral/other_truth.mp3",
+        "mixture": "cases/worst_AM Contra - Heart Peripheral/mixture.mp3"
+      }
+    },
+    {
+      "id": "worst_Carlos Gonzalez - A Place For Us",
+      "track": "Carlos Gonzalez - A Place For Us",
+      "tag": "worst",
+      "csdr_mean": 5.15,
+      "stems": {
+        "vocals": {
+          "csdr": 7.07,
+          "energy_rel_db": -4.1,
+          "energy_median_db": -6.8,
+          "quiet": false
+        },
+        "drums": {
+          "csdr": 6.21,
+          "energy_rel_db": -6.9,
+          "energy_median_db": -5.6,
+          "quiet": false
+        },
+        "bass": {
+          "csdr": -0.18,
+          "energy_rel_db": -13.3,
+          "energy_median_db": -7.3,
+          "quiet": true
+        },
+        "other": {
+          "csdr": 7.47,
+          "energy_rel_db": -4.5,
+          "energy_median_db": -6.1,
+          "quiet": false
+        }
+      },
+      "files": {
+        "vocals": "cases/worst_Carlos Gonzalez - A Place For Us/vocals.mp3",
+        "vocals_truth": "cases/worst_Carlos Gonzalez - A Place For Us/vocals_truth.mp3",
+        "drums": "cases/worst_Carlos Gonzalez - A Place For Us/drums.mp3",
+        "drums_truth": "cases/worst_Carlos Gonzalez - A Place For Us/drums_truth.mp3",
+        "bass": "cases/worst_Carlos Gonzalez - A Place For Us/bass.mp3",
+        "bass_truth": "cases/worst_Carlos Gonzalez - A Place For Us/bass_truth.mp3",
+        "other": "cases/worst_Carlos Gonzalez - A Place For Us/other.mp3",
+        "other_truth": "cases/worst_Carlos Gonzalez - A Place For Us/other_truth.mp3",
+        "mixture": "cases/worst_Carlos Gonzalez - A Place For Us/mixture.mp3"
+      }
+    },
+    {
+      "id": "worst_Punkdisco - Oral Hygiene",
+      "track": "Punkdisco - Oral Hygiene",
+      "tag": "worst",
+      "csdr_mean": 5.15,
+      "stems": {
+        "vocals": {
+          "csdr": 9.36,
+          "energy_rel_db": -11.8,
+          "energy_median_db": -6.8,
+          "quiet": false
+        },
+        "drums": {
+          "csdr": 6.03,
+          "energy_rel_db": -3.8,
+          "energy_median_db": -5.6,
+          "quiet": false
+        },
+        "bass": {
+          "csdr": 3.91,
+          "energy_rel_db": -3.3,
+          "energy_median_db": -7.3,
+          "quiet": false
+        },
+        "other": {
+          "csdr": 1.31,
+          "energy_rel_db": -14.3,
+          "energy_median_db": -6.1,
+          "quiet": true
+        }
+      },
+      "files": {
+        "vocals": "cases/worst_Punkdisco - Oral Hygiene/vocals.mp3",
+        "vocals_truth": "cases/worst_Punkdisco - Oral Hygiene/vocals_truth.mp3",
+        "drums": "cases/worst_Punkdisco - Oral Hygiene/drums.mp3",
+        "drums_truth": "cases/worst_Punkdisco - Oral Hygiene/drums_truth.mp3",
+        "bass": "cases/worst_Punkdisco - Oral Hygiene/bass.mp3",
+        "bass_truth": "cases/worst_Punkdisco - Oral Hygiene/bass_truth.mp3",
+        "other": "cases/worst_Punkdisco - Oral Hygiene/other.mp3",
+        "other_truth": "cases/worst_Punkdisco - Oral Hygiene/other_truth.mp3",
+        "mixture": "cases/worst_Punkdisco - Oral Hygiene/mixture.mp3"
+      }
+    },
+    {
+      "id": "worst_Arise - Run Run Run",
+      "track": "Arise - Run Run Run",
+      "tag": "worst",
+      "csdr_mean": 5.22,
+      "stems": {
+        "vocals": {
+          "csdr": 10.34,
+          "energy_rel_db": -9.1,
+          "energy_median_db": -6.8,
+          "quiet": false
+        },
+        "drums": {
+          "csdr": -2.71,
+          "energy_rel_db": -9.3,
+          "energy_median_db": -5.6,
+          "quiet": false
+        },
+        "bass": {
+          "csdr": 12.33,
+          "energy_rel_db": -4.4,
+          "energy_median_db": -7.3,
+          "quiet": false
+        },
+        "other": {
+          "csdr": 0.91,
+          "energy_rel_db": -3.9,
+          "energy_median_db": -6.1,
+          "quiet": false
+        }
+      },
+      "files": {
+        "vocals": "cases/worst_Arise - Run Run Run/vocals.mp3",
+        "vocals_truth": "cases/worst_Arise - Run Run Run/vocals_truth.mp3",
+        "drums": "cases/worst_Arise - Run Run Run/drums.mp3",
+        "drums_truth": "cases/worst_Arise - Run Run Run/drums_truth.mp3",
+        "bass": "cases/worst_Arise - Run Run Run/bass.mp3",
+        "bass_truth": "cases/worst_Arise - Run Run Run/bass_truth.mp3",
+        "other": "cases/worst_Arise - Run Run Run/other.mp3",
+        "other_truth": "cases/worst_Arise - Run Run Run/other_truth.mp3",
+        "mixture": "cases/worst_Arise - Run Run Run/mixture.mp3"
+      }
+    },
+    {
+      "id": "best_Side Effects Project - Sing With Me",
+      "track": "Side Effects Project - Sing With Me",
+      "tag": "best",
+      "csdr_mean": 11.84,
+      "stems": {
+        "vocals": {
+          "csdr": 14.06,
+          "energy_rel_db": -4.0,
+          "energy_median_db": -6.8,
+          "quiet": false
+        },
+        "drums": {
+          "csdr": 15.8,
+          "energy_rel_db": -3.1,
+          "energy_median_db": -5.6,
+          "quiet": false
+        },
+        "bass": {
+          "csdr": 15.22,
+          "energy_rel_db": -10.6,
+          "energy_median_db": -7.3,
+          "quiet": false
+        },
+        "other": {
+          "csdr": 2.29,
+          "energy_rel_db": -15.0,
+          "energy_median_db": -6.1,
+          "quiet": true
+        }
+      },
+      "files": {
+        "vocals": "cases/best_Side Effects Project - Sing With Me/vocals.mp3",
+        "vocals_truth": "cases/best_Side Effects Project - Sing With Me/vocals_truth.mp3",
+        "drums": "cases/best_Side Effects Project - Sing With Me/drums.mp3",
+        "drums_truth": "cases/best_Side Effects Project - Sing With Me/drums_truth.mp3",
+        "bass": "cases/best_Side Effects Project - Sing With Me/bass.mp3",
+        "bass_truth": "cases/best_Side Effects Project - Sing With Me/bass_truth.mp3",
+        "other": "cases/best_Side Effects Project - Sing With Me/other.mp3",
+        "other_truth": "cases/best_Side Effects Project - Sing With Me/other_truth.mp3",
+        "mixture": "cases/best_Side Effects Project - Sing With Me/mixture.mp3"
+      }
+    },
+    {
+      "id": "best_Enda Reilly - Cur An Long Ag Seol",
+      "track": "Enda Reilly - Cur An Long Ag Seol",
+      "tag": "best",
+      "csdr_mean": 11.97,
+      "stems": {
+        "vocals": {
+          "csdr": 10.83,
+          "energy_rel_db": -5.5,
+          "energy_median_db": -6.8,
+          "quiet": false
+        },
+        "drums": {
+          "csdr": 16.51,
+          "energy_rel_db": -5.8,
+          "energy_median_db": -5.6,
+          "quiet": false
+        },
+        "bass": {
+          "csdr": 11.13,
+          "energy_rel_db": -6.5,
+          "energy_median_db": -7.3,
+          "quiet": false
+        },
+        "other": {
+          "csdr": 9.39,
+          "energy_rel_db": -6.6,
+          "energy_median_db": -6.1,
+          "quiet": false
+        }
+      },
+      "files": {
+        "vocals": "cases/best_Enda Reilly - Cur An Long Ag Seol/vocals.mp3",
+        "vocals_truth": "cases/best_Enda Reilly - Cur An Long Ag Seol/vocals_truth.mp3",
+        "drums": "cases/best_Enda Reilly - Cur An Long Ag Seol/drums.mp3",
+        "drums_truth": "cases/best_Enda Reilly - Cur An Long Ag Seol/drums_truth.mp3",
+        "bass": "cases/best_Enda Reilly - Cur An Long Ag Seol/bass.mp3",
+        "bass_truth": "cases/best_Enda Reilly - Cur An Long Ag Seol/bass_truth.mp3",
+        "other": "cases/best_Enda Reilly - Cur An Long Ag Seol/other.mp3",
+        "other_truth": "cases/best_Enda Reilly - Cur An Long Ag Seol/other_truth.mp3",
+        "mixture": "cases/best_Enda Reilly - Cur An Long Ag Seol/mixture.mp3"
+      }
+    }
+  ]
+}
