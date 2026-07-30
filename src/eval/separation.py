@@ -302,25 +302,15 @@ def silence_baseline(mixture: np.ndarray, stems: tuple[str, ...] = STEMS) -> dic
     return {s: np.zeros_like(mixture) for s in stems}
 
 
-def ideal_ratio_mask(
+def _mask_oracle(
     references: dict[str, np.ndarray],
     mixture: np.ndarray,
-    n_fft: int = 4096,
-    hop_length: int = 1024,
-    power: float = 2.0,
+    kind: str,
+    n_fft: int,
+    hop_length: int,
+    power: float,
 ) -> dict[str, np.ndarray]:
-    """IRM oracle：用真值算出的理想比值掩码，作为**上界锚点**。
-
-    含义："在'预测频谱掩码再 iSTFT'这个框架下，最好能到多少 dB"。
-    真实模型的 SDR 应该落在 :func:`trivial_baseline` 和这个之间；
-    落到外面就是哪里错了。
-
-    Args:
-        power: 1.0 = 幅度掩码，2.0 = 功率掩码（更常用）。
-
-    Returns:
-        ``{stem: (n, ch)}``，长度与 mixture 对齐。
-    """
+    """掩码类 oracle 的公共实现。``kind`` ∈ {"ratio", "binary"}。"""
     import librosa
 
     from src.audio.io import match_length
@@ -337,16 +327,70 @@ def ideal_ratio_mask(
             ref_c = match_length(references[s], n_samples)[:, c]
             specs[s].append(librosa.stft(ref_c, n_fft=n_fft, hop_length=hop_length))
 
-    out: dict[str, np.ndarray] = {}
     eps = 1e-10
-    denom = [
-        sum(np.abs(specs[s][c]) ** power for s in stems) + eps for c in range(n_ch)
-    ]
-    for s in stems:
+    out: dict[str, np.ndarray] = {}
+
+    if kind == "binary":
+        # 每个时频点只判给能量最大的那个声部
+        winners = [
+            np.argmax(np.stack([np.abs(specs[s][c]) for s in stems]), axis=0)
+            for c in range(n_ch)
+        ]
+
+    denom = [sum(np.abs(specs[s][c]) ** power for s in stems) + eps for c in range(n_ch)]
+
+    for i, s in enumerate(stems):
         chans = []
         for c in range(n_ch):
-            mask = (np.abs(specs[s][c]) ** power) / denom[c]
+            if kind == "ratio":
+                mask = (np.abs(specs[s][c]) ** power) / denom[c]
+            else:
+                mask = (winners[c] == i).astype(np.float32)
             y = librosa.istft(mask * mix_specs[c], hop_length=hop_length, length=n_samples)
             chans.append(y)
         out[s] = np.stack(chans, axis=1).astype(np.float32)
     return out
+
+
+def ideal_ratio_mask(
+    references: dict[str, np.ndarray],
+    mixture: np.ndarray,
+    n_fft: int = 4096,
+    hop_length: int = 1024,
+    power: float = 2.0,
+) -> dict[str, np.ndarray]:
+    """IRM oracle：用真值算出的理想比值掩码。
+
+    含义："在'预测频谱掩码再 iSTFT'这个框架下，最好能到多少 dB"。
+
+    .. warning::
+       **这不是所有方法的上界，只是掩码类方法的上界。**
+
+       在 MUSDB18-HQ test 上实测（4096/1024, power=2）：
+       ``vocals 10.05 / drums 9.30 / bass 7.75 / other 8.69 → 平均 8.95 dB``。
+
+       Demucs 这类**直接生成波形**的模型不受这个天花板约束 —— 它们能修正相位，
+       而掩码只能缩放混音已有的复数谱。实测 htdemucs 在 drums 与 bass 上
+       与 IRM oracle 已**统计上不可区分**（配对 bootstrap p=0.88 / 0.18）。
+
+       文献里 12~15 dB 那一档是**多通道维纳滤波（MWF）oracle**，不是 IRM，
+       别拿来当本函数的预期值（这是 M1 踩过的坑，见 DEVLOG）。
+
+    Args:
+        power: 1.0 = 幅度掩码，2.0 = 功率掩码（更常用，也更强）。
+    """
+    return _mask_oracle(references, mixture, "ratio", n_fft, hop_length, power)
+
+
+def ideal_binary_mask(
+    references: dict[str, np.ndarray],
+    mixture: np.ndarray,
+    n_fft: int = 4096,
+    hop_length: int = 1024,
+) -> dict[str, np.ndarray]:
+    """IBM oracle：每个时频点整块判给能量最大的声部（0/1 硬掩码）。
+
+    比 IRM 弱（实测 8 首平均 8.81 vs IRM 9.23 dB）。存在的意义是**交叉验证**：
+    如果 IBM 反而高于 IRM，说明掩码实现或 iSTFT 有问题。
+    """
+    return _mask_oracle(references, mixture, "binary", n_fft, hop_length, 1.0)

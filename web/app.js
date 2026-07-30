@@ -701,19 +701,24 @@ function renderAnalysisPanel() {
 const ANCHOR_META = {
   silence: ['输出全零', '解析已知值，验证实现正确'],
   trivial: ['混音当每一轨', '下界'],
-  oracle: ['IRM 理想掩码', '上界'],
+  htdemucs: ['Demucs v4', '复现官方 9.00 dB'],
+  oracle: ['IRM 理想掩码', '掩码类方法的上界'],
 };
 
 async function loadDashboard() {
   const tbody = $('anchorTable').querySelector('tbody');
   const rows = [];
 
-  for (const name of ['silence', 'trivial', 'oracle']) {
+  for (const name of ['silence', 'trivial', 'htdemucs', 'oracle']) {
     try {
-      const r = await fetch(`../results/m0_selfcheck_${name}.json`);
+      // M1 之后优先读 MUSDB18-HQ 真实数据的结果，缺失时回落到 M0 的合成数据自检
+      let r = await fetch(`../results/p1_${name}.json`);
+      if (!r.ok) r = await fetch(`../results/m0_selfcheck_${name}.json`);
       if (!r.ok) continue;
       const d = await r.json();
-      const v = d.mean?.uSDR?.mean;
+      // M1 的真实数据结果优先看 cSDR 中位数聚合（museval 官方口径），
+      // 合成数据的 M0 自检只有 uSDR
+      const v = d.median?.cSDR?.mean ?? d.mean?.uSDR?.mean;
       if (v === undefined) continue;
       const [desc, role] = ANCHOR_META[name];
       rows.push(`<tr><td><code>${name}</code> ${desc}</td>
@@ -729,10 +734,10 @@ async function loadDashboard() {
 
 const MILESTONES = [
   ['M0', '工程地基 · 评测框架', 'done'],
-  ['M1', '分离 baseline · 复现 SDR', ''],
-  ['M2', '前端最小可用 · 四轨混音台', 'active'],
+  ['M1', '分离 baseline · htdemucs 8.80 dB', 'done'],
+  ['M2', '前端最小可用 · 四轨混音台', 'done'],
   ['M3', '标签 L0→L4', ''],
-  ['M4', '分离改进 A+B · 消融表', ''],
+  ['M4', '分离改进 A+B · 消融表', 'active'],
   ['M5', 'Stem-aware Tagging ★', ''],
   ['M6', '音乐分析 + 自动 Mashup', ''],
   ['M7', '检索 + 服务化', ''],

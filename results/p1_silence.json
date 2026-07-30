@@ -1,0 +1,24 @@
+{
+  "model": "silence",
+  "label": "silence（全零，自检）",
+  "source": "MUSDB18-HQ test（50 首）",
+  "rtf_median": 0.0001698394317022256,
+  "median": {
+    "uSDR": {
+      "vocals": 0.0,
+      "drums": 0.0,
+      "bass": 0.0,
+      "other": 0.0,
+      "mean": 0.0
+    }
+  },
+  "mean": {
+    "uSDR": {
+      "vocals": 0.0,
+      "drums": 0.0,
+      "bass": 0.0,
+      "other": 0.0,
+      "mean": 0.0
+    }
+  }
+}

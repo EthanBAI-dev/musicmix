@@ -1,36 +1,45 @@
 """音源分离评测的命令行入口。
 
-M0 验收：**在还没下载 MUSDB18-HQ 之前，用合成数据就能证明评测框架是对的。**
-
-    # 合成数据自检（不需要任何数据集，30 秒跑完）
-    python -m scripts.run_separation_eval --synthetic 8
-
-    # 真实数据（需要 data/musdb18hq/）
-    python -m scripts.run_separation_eval --model trivial --subset test
-    python -m scripts.run_separation_eval --model oracle  --subset test --limit 5
-
-模型（``--model``）目前只有三个"参照物"，真实模型在 P1 接进来：
+参照基线（理论值已知，用来验证评测代码本身）：
 
 - ``silence``  输出全零 → uSDR 恒为 0.00 dB，最硬的自检
 - ``trivial``  混音当每一轨 → **下界锚点**
 - ``oracle``   IRM 理想比值掩码 → **上界锚点**
 
-真实模型的成绩必须落在 trivial 和 oracle 之间。落到外面就是哪里错了。
+真实模型（demucs 权重名）：``htdemucs`` / ``htdemucs_ft`` / ``mdx_extra`` …
+**成绩必须落在 trivial 和 oracle 之间。落到外面就是哪里错了。**
+
+用法::
+
+    # 不需要数据集，验证评测框架
+    python -m scripts.run_separation_eval --synthetic 8 --model oracle
+
+    # 真实数据
+    python -m scripts.run_separation_eval --model trivial  --subset test --workers 6 --out results/p1_trivial.md
+    python -m scripts.run_separation_eval --model htdemucs --subset test --workers 3 --out results/p1_htdemucs.md
+
+关于 ``--workers``：museval 是整个流程的瓶颈（一首 4 分钟的歌约 60 秒），
+且是单线程 CPU 密集。并行化收益极大（M2 Max 上 6 进程约快 5 倍）。
+跑 GPU 模型时每个子进程会各自加载一份权重，所以 workers 不宜开太大。
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 
 from src.audio.io import match_length
+from src.bench.timer import device_info
 from src.eval.separation import (
     STEMS,
     TrackScores,
@@ -41,27 +50,92 @@ from src.eval.separation import (
     silence_baseline,
     trivial_baseline,
 )
-from src.bench.timer import device_info
-from src.datasets.synthetic import SyntheticTrack
 
-MODELS = ("silence", "trivial", "oracle")
+REFERENCE_MODELS = ("silence", "trivial", "oracle")
+
+
+# --------------------------------------------------------------------------------------
+# 配置：必须可 pickle，因为 macOS 上 multiprocessing 用 spawn
+# --------------------------------------------------------------------------------------
+
+@dataclass
+class EvalConfig:
+    model: str
+    device: str = "auto"
+    overlap: float = 0.25
+    shifts: int = 0
+    compute_csdr: bool = True
+    save_stems: str = ""
+    root: str = "data/musdb18hq"
+    subset: str = "test"
+    synthetic_seconds: float = 6.0
 
 
 # --------------------------------------------------------------------------------------
 # 估计器
 # --------------------------------------------------------------------------------------
 
-def separate(model: str, mixture: np.ndarray, references: dict) -> dict[str, np.ndarray]:
-    """按名字产生一组估计。P1 接入真实模型时在这里加分支。"""
-    if model == "silence":
-        return silence_baseline(mixture)
-    if model == "trivial":
-        return trivial_baseline(mixture)
-    if model == "oracle":
-        est = ideal_ratio_mask(references, mixture)
-        n = mixture.shape[0]
-        return {k: match_length(v, n) for k, v in est.items()}
-    raise ValueError(f"未知模型 {model!r}，可选：{MODELS}")
+_SEPARATOR = None       # 每个进程各自缓存一份，避免每首歌重新加载权重
+
+
+def build_separator(cfg: EvalConfig):
+    """返回 ``(fn, label)``；``fn(mixture, references) -> {stem: (n,2)}``。"""
+    if cfg.model == "silence":
+        return (lambda mix, refs: silence_baseline(mix)), "silence（全零，自检）"
+    if cfg.model == "trivial":
+        return (lambda mix, refs: trivial_baseline(mix)), "trivial（混音当每一轨，下界）"
+    if cfg.model == "oracle":
+        def _oracle(mix, refs):
+            est = ideal_ratio_mask(refs, mix)
+            return {k: match_length(v, mix.shape[0]) for k, v in est.items()}
+        return _oracle, "oracle（IRM 理想掩码，上界）"
+
+    from src.separation import demucs_model
+
+    sep = demucs_model.load(cfg.model, device=cfg.device, overlap=cfg.overlap, shifts=cfg.shifts)
+    label = f"{sep.name}（{sep.device}, overlap={sep.overlap}"
+    label += f", shifts={sep.shifts}）" if sep.shifts else "）"
+    return (lambda mix, refs: demucs_model.separate(sep, mix)), label
+
+
+def get_separator(cfg: EvalConfig):
+    global _SEPARATOR
+    if _SEPARATOR is None:
+        _SEPARATOR = build_separator(cfg)
+    return _SEPARATOR
+
+
+# --------------------------------------------------------------------------------------
+# 单首歌：worker 函数必须在模块顶层才能被 spawn 的子进程 pickle
+# --------------------------------------------------------------------------------------
+
+def eval_one(payload: tuple[EvalConfig, str, object]) -> tuple[TrackScores, float, float]:
+    cfg, kind, ident = payload
+
+    if kind == "synthetic":
+        from src.datasets.synthetic import SyntheticTrack
+        track = SyntheticTrack(int(ident), cfg.synthetic_seconds)
+    else:
+        from src.datasets.musdb import Track
+        name, path = ident
+        track = Track(name=name, path=Path(path), subset=cfg.subset)
+
+    refs = track.references()
+    mix = track.mixture()
+    audio_sec = mix.shape[0] / 44100.0
+
+    separator, _ = get_separator(cfg)
+    t0 = time.perf_counter()
+    ests = separator(mix, refs)
+    sep_s = time.perf_counter() - t0
+
+    if cfg.save_stems:
+        from src.audio.io import save_audio
+        for name_, y in ests.items():
+            save_audio(Path(cfg.save_stems) / track.name / f"{name_}.wav", y)
+
+    scores = evaluate_track(refs, ests, track.name, compute_csdr=cfg.compute_csdr)
+    return scores, sep_s, audio_sec
 
 
 # --------------------------------------------------------------------------------------
@@ -79,12 +153,26 @@ def git_commit() -> str:
 
 
 def run(args: argparse.Namespace) -> int:
+    # silence 基线按定义就是全零，而 BSS Eval v4 要求估计非全零（否则投影方程组欠定）。
+    # 这是 BSS Eval 的固有约束，不是缺陷 —— 它的意义本来就只在 uSDR 那条"恰好 0.00 dB"上。
+    compute_csdr = not args.no_csdr
+    if args.model == "silence" and compute_csdr:
+        print("ℹ️  silence 基线全零，BSS Eval 无法处理，自动跳过 cSDR（只看 uSDR 是否恰为 0.00 dB）")
+        compute_csdr = False
+
+    cfg = EvalConfig(
+        model=args.model, device=args.device, overlap=args.overlap, shifts=args.shifts,
+        compute_csdr=compute_csdr, save_stems=args.save_stems,
+        root=args.root, subset=args.subset, synthetic_seconds=args.synthetic_seconds,
+    )
+
+    # ---- 组装任务列表 ----
     if args.synthetic:
-        tracks = [SyntheticTrack(i, args.synthetic_seconds) for i in range(args.synthetic)]
+        items = [(cfg, "synthetic", i) for i in range(args.synthetic)]
+        names = [f"synthetic-{i:02d}" for i in range(args.synthetic)]
         source = f"合成数据 ×{args.synthetic}（每首 {args.synthetic_seconds}s）"
     else:
         from src.datasets.musdb import load_tracks
-
         try:
             tracks = load_tracks(args.root, args.subset)
         except FileNotFoundError as e:
@@ -93,53 +181,68 @@ def run(args: argparse.Namespace) -> int:
             return 1
         if args.limit:
             tracks = tracks[: args.limit]
+        items = [(cfg, "musdb", (t.name, str(t.path))) for t in tracks]
+        names = [t.name for t in tracks]
         source = f"MUSDB18-HQ {args.subset}（{len(tracks)} 首）"
 
-    # silence 基线按定义就是全零，而 BSS Eval v4 要求估计非全零（否则投影方程组欠定）。
-    # 这是 BSS Eval 的固有约束，不是缺陷 —— 它的意义本来就只在 uSDR 那条"恰好 0.00 dB"上。
-    compute_csdr = not args.no_csdr
-    if args.model == "silence" and compute_csdr:
-        print("ℹ️  silence 基线全零，BSS Eval 无法处理，自动跳过 cSDR（只看 uSDR 是否恰为 0.00 dB）")
-        compute_csdr = False
+    _, model_label = build_separator(cfg) if args.workers == 1 else (None, _label_only(cfg))
 
     print(f"数据源：{source}")
-    print(f"模型  ：{args.model}")
-    print(f"cSDR  ：{'开启（museval，较慢）' if compute_csdr else '关闭（只算 uSDR / SI-SDR）'}\n")
+    print(f"模型  ：{model_label}")
+    print(f"cSDR  ：{'开启（museval，较慢）' if compute_csdr else '关闭（只算 uSDR / SI-SDR）'}")
+    print(f"并行  ：{args.workers} 进程\n")
 
     scores: list[TrackScores] = []
+    sep_times: list[tuple[float, float]] = []
     t_start = time.perf_counter()
+    total = len(items)
 
-    for i, track in enumerate(tracks, 1):
-        refs = track.references()
-        mix = track.mixture()
-
-        t0 = time.perf_counter()
-        ests = separate(args.model, mix, refs)
-        sep_s = time.perf_counter() - t0
-
-        s = evaluate_track(refs, ests, track.name, compute_csdr=compute_csdr)
-        scores.append(s)
-
+    def report(i: int, s: TrackScores, sep_s: float, audio_sec: float) -> None:
         shown = s.csdr if compute_csdr else s.usdr
-        mean = np.mean([v for v in shown.values() if np.isfinite(v)])
-        print(
-            f"[{i:>3}/{len(tracks)}] {track.name[:46]:<46} "
-            f"平均 {mean:6.2f} dB  (分离 {sep_s:.1f}s)"
-        )
+        vals = [v for v in shown.values() if np.isfinite(v)]
+        mean = np.mean(vals) if vals else float("nan")
+        rtf = sep_s / audio_sec if audio_sec else 0.0
+        done = time.perf_counter() - t_start
+        eta = done / i * (total - i)
+        print(f"[{i:>3}/{total}] {s.track_name[:42]:<42} 平均 {mean:6.2f} dB "
+              f"(分离 {sep_s:5.1f}s, RTF {rtf:.3f})  ETA {eta / 60:.1f}min", flush=True)
+
+    if args.workers == 1:
+        for i, item in enumerate(items, 1):
+            s, sep_s, audio_sec = eval_one(item)
+            scores.append(s); sep_times.append((sep_s, audio_sec))
+            report(i, s, sep_s, audio_sec)
+    else:
+        with ProcessPoolExecutor(max_workers=args.workers) as pool:
+            futures = {pool.submit(eval_one, item): item for item in items}
+            for i, fut in enumerate(as_completed(futures), 1):
+                s, sep_s, audio_sec = fut.result()
+                scores.append(s); sep_times.append((sep_s, audio_sec))
+                report(i, s, sep_s, audio_sec)
+        # 并行完成顺序是乱的，按原始曲目顺序排回来，保证 CSV 可复现
+        order = {n: k for k, n in enumerate(names)}
+        pairs = sorted(zip(scores, sep_times, strict=True), key=lambda p: order.get(p[0].track_name, 1e9))
+        scores = [p[0] for p in pairs]
+        sep_times = [p[1] for p in pairs]
 
     elapsed = time.perf_counter() - t_start
-    total_audio = sum(getattr(t, "duration_seconds", 0.0) for t in tracks)
+    total_audio = sum(a for _, a in sep_times)
+    rtfs = sorted(s / a for s, a in sep_times if a)
+    rtf_median = rtfs[len(rtfs) // 2] if rtfs else float("nan")
 
     # ---- 汇总 ----
     agg_median = aggregate(scores, agg="median")
     agg_mean = aggregate(scores, agg="mean")
 
     print("\n" + "=" * 78)
-    if compute_csdr:
+    if compute_csdr and "cSDR" in agg_median:
         print(format_table({args.model: agg_median["cSDR"]}, metric="cSDR（中位数聚合，museval 官方口径）"))
         print()
     print(format_table({args.model: agg_mean["uSDR"]}, metric="uSDR（均值聚合，MDX 口径）"))
     print("=" * 78)
+    if np.isfinite(rtf_median) and rtf_median > 0:
+        print(f"分离 RTF 中位数 {rtf_median:.4f}（×{1 / rtf_median:.1f} 实时）"
+              f"　总耗时 {elapsed / 60:.1f} min")
 
     # ---- 落盘 ----
     if args.out:
@@ -153,16 +256,17 @@ def run(args: argparse.Namespace) -> int:
             "| 项 | 值 |",
             "|---|---|",
             f"| 数据源 | {source} |",
-            f"| 模型 | `{args.model}` |",
+            f"| 模型 | {model_label} |",
             f"| 日期 | {datetime.now():%Y-%m-%d %H:%M} |",
             f"| commit | `{git_commit()}` |",
-            f"| 硬件 | {info.get('cpu', info.get('machine'))} / {info.get('device')} |",
+            f"| 硬件 | {info.get('cpu', info.get('machine'))} / torch {info.get('torch', '?')} |",
             f"| 命令 | `{' '.join(sys.argv)}` |",
-            f"| 总耗时 | {elapsed:.1f}s（音频总长 {total_audio:.0f}s） |",
+            f"| 分离 RTF（中位数） | "
+            + (f"{rtf_median:.4f}（×{1 / rtf_median:.1f} 实时）"
+               if np.isfinite(rtf_median) and rtf_median > 0 else "—") + " |",
+            f"| 总耗时 | {elapsed / 60:.1f} min（音频总长 {total_audio / 60:.1f} min，含 museval，{args.workers} 进程） |",
             "",
         ]
-        # 某个指标可能整体算不出来（比如 silence 基线的 SI-SDR 全是 -inf），
-        # 这时它不会出现在聚合结果里。缺就跳过并注明，不要崩，也不要假装有值。
         if compute_csdr:
             for m in ("cSDR", "ISR", "SIR", "SAR"):
                 if m in agg_median:
@@ -172,20 +276,22 @@ def run(args: argparse.Namespace) -> int:
                 lines += [format_table({args.model: agg_mean[m]}, metric=f"{m}（均值聚合）"), ""]
             else:
                 lines += [f"> ⚠️ {m}：全部曲目均为非有限值，无法聚合（该基线下属预期行为）。", ""]
+
         out.write_text("\n".join(lines), encoding="utf-8")
         print(f"\n✅ 汇总表 → {out}")
 
         # 逐首原始数据：显著性检验和失败案例定位都要用它，比汇总表重要
-        csv_path = out.with_suffix(".csv")
         import pandas as pd
-
+        csv_path = out.with_suffix(".csv")
         pd.DataFrame([s.to_row() for s in scores]).to_csv(csv_path, index=False)
         print(f"✅ 逐首数据 → {csv_path}")
 
         json_path = out.with_suffix(".json")
         json_path.write_text(
             json.dumps(
-                {"model": args.model, "source": source, "median": agg_median, "mean": agg_mean},
+                {"model": args.model, "label": model_label, "source": source,
+                 "rtf_median": rtf_median if np.isfinite(rtf_median) else None,
+                 "median": agg_median, "mean": agg_mean},
                 ensure_ascii=False, indent=2,
             ),
             encoding="utf-8",
@@ -195,23 +301,48 @@ def run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _label_only(cfg: EvalConfig) -> str:
+    """并行模式下主进程不加载模型（免得白占一份显存），只生成标签。"""
+    if cfg.model in REFERENCE_MODELS:
+        return {"silence": "silence（全零，自检）",
+                "trivial": "trivial（混音当每一轨，下界）",
+                "oracle": "oracle（IRM 理想掩码，上界）"}[cfg.model]
+    label = f"{cfg.model}（{cfg.device}, overlap={cfg.overlap}"
+    return label + (f", shifts={cfg.shifts}）" if cfg.shifts else "）")
+
+
 def main() -> int:
     p = argparse.ArgumentParser(
-        description="音源分离评测（M0 参照基线）",
+        description="音源分离评测",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    p.add_argument("--model", default="trivial", choices=MODELS)
+    p.add_argument("--model", default="trivial",
+                   help="参照基线 silence/trivial/oracle，或 demucs 权重名 htdemucs / htdemucs_ft / mdx_extra …")
+    p.add_argument("--device", default="auto", choices=("auto", "cpu", "mps", "cuda"))
+    p.add_argument("--overlap", type=float, default=0.25,
+                   help="分块推理重叠率。官方默认 0.25，**做 baseline 不要改**")
+    p.add_argument("--shifts", type=int, default=0,
+                   help="随机时移 TTA 次数。>0 就不是 baseline 了（属 P2-A）")
+    p.add_argument("--workers", type=int, default=1,
+                   help="并行进程数。museval 是瓶颈，参照基线可开 6；GPU 模型建议 2~3")
+    p.add_argument("--save-stems", default="", metavar="DIR",
+                   help="把分离结果存到该目录（供前端试听 / 失败案例分析）")
     p.add_argument("--root", default="data/musdb18hq", help="MUSDB18-HQ 根目录")
     p.add_argument("--subset", default="test", choices=("train", "test"))
     p.add_argument("--limit", type=int, default=0, help="只评前 N 首（调试用）")
     p.add_argument("--synthetic", type=int, default=0, metavar="N",
                    help="不用真实数据，改用 N 首合成歌曲验证评测框架")
     p.add_argument("--synthetic-seconds", type=float, default=6.0)
-    p.add_argument("--no-csdr", action="store_true",
-                   help="跳过 museval（慢），只算 uSDR / SI-SDR")
+    p.add_argument("--no-csdr", action="store_true", help="跳过 museval（慢），只算 uSDR / SI-SDR")
     p.add_argument("--out", default="", help="输出 markdown 路径，同时写同名 .csv 和 .json")
-    return run(p.parse_args())
+    args = p.parse_args()
+
+    # 每个子进程内部再开多线程会互相抢核，反而更慢
+    if args.workers > 1:
+        for var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
+            os.environ.setdefault(var, "2")
+    return run(args)
 
 
 if __name__ == "__main__":

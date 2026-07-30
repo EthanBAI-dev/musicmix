@@ -18,7 +18,8 @@
   </div>
   <div class="badges">
     <span class="pill pill-ok">M0 评测框架 ✅</span>
-    <span class="pill">M2 混音台 · 进行中</span>
+    <span class="pill pill-ok">M1 分离 8.80 dB ✅</span>
+    <span class="pill pill-ok">M2 混音台 ✅</span>
   </div>
 </header>
 
@@ -103,28 +104,29 @@
 <section class="panel">
   <div class="panel-head">
     <h2>项目状态</h2>
-    <span class="tag">M0 自检 · 2026-07-29</span>
+    <span class="tag">M1 · MUSDB18-HQ test 50 首 · 2026-07-30</span>
   </div>
 
   <div class="cards">
     <div class="card">
       <h3>评测框架锚点</h3>
-      <p class="card-sub">三个理论值已知的参照物，用来验证评测代码本身没写错</p>
+      <p class="card-sub">MUSDB18-HQ test 全 50 首，cSDR 平均（museval 中位数聚合）</p>
       <table class="mini" id="anchorTable">
-        <thead><tr><th>锚点</th><th>uSDR 平均</th><th>作用</th></tr></thead>
+        <thead><tr><th>模型</th><th>SDR 平均</th><th>作用</th></tr></thead>
         <tbody><tr><td colspan="3" class="dim">加载中…</td></tr></tbody>
       </table>
-      <p class="card-foot">真实模型的成绩必须落在下界和上界之间 —— 落到外面就是代码错了。</p>
+      <p class="card-foot">IRM oracle 只是<b>掩码类方法</b>的上界。Demucs 直接生成波形能修正相位，实测在 drums/bass 上已与它统计上不可区分（配对 bootstrap p=0.88 / 0.18）。</p>
     </div>
 
     <div class="card">
       <h3>单元测试</h3>
-      <div class="big-num"><b id="testCount">108</b><span>passed</span></div>
+      <div class="big-num"><b id="testCount">111</b><span>passed</span></div>
       <ul class="ticks">
         <li>全零估计 → uSDR 恰为 <b>0.00 dB</b></li>
         <li>构造 SNR=7dB 误差 → SDR 恰为 <b>7.00 dB</b></li>
         <li>调阈值 → Macro-F1 <b>0.50→1.00</b>，mAP 恒为 1.00</li>
         <li>+0.15 dB 的微小提升能被配对检验检出</li>
+        <li>IRM 必须优于 IBM，IBM 必须是硬划分</li>
       </ul>
     </div>
 

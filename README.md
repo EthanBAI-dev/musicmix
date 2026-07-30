@@ -2,7 +2,7 @@
 
 > 上传一首歌 → 拆成人声/鼓/贝斯/其他四轨 → 自动分析 BPM、调性、和弦、曲式结构 → 打上风格/情绪/乐器标签 → 检索相似歌曲 → 在浏览器里重新混音。
 
-**当前状态：✅ M0 工程地基（评测框架 + 108 条单测）· ✅ M2 混音台可用 → 下一步 M1（分离 baseline）**
+**当前状态：✅ M0 评测框架 · ✅ M1 分离 baseline 复现 · ✅ M2 混音台 → 下一步 M4（分离改进 + 消融）**
 
 ## 快速开始
 
@@ -11,7 +11,7 @@ conda create -n music-mix python=3.11 -y && conda activate music-mix
 pip install -e ".[eval,torch,dev]"
 
 python -m scripts.check_env                    # 环境自检（含 MPS 实测）
-python -m pytest tests/ -q                     # 108 条单测
+python -m pytest tests/ -q                     # 111 条单测
 python -m scripts.run_separation_eval --synthetic 6 --model oracle   # 评测框架自检，不需要数据集
 ```
 
@@ -67,20 +67,23 @@ python -m scripts.make_demo_stems && python -m http.server 8123
 
 | 任务 | 指标 | Baseline | Ours |
 |---|---|---|---|
-| 音源分离 | cSDR (MUSDB18-HQ, 4 轨平均) | — | — |
+| 音源分离 | cSDR (MUSDB18-HQ test 50 首, 4 轨平均) | **htdemucs 8.80 dB**（官方 9.00，差 0.20）| 待 P2 |
 | 音乐标签 | mAP / Macro-F1 (MTG-Jamendo) | — | — |
 | 相似检索 | HitRate@10 | — | — |
 | 推理性能 | 端到端 RTF | — | — |
 
-评测框架的参照锚点已就位（合成数据，[M0 自检报告](results/M0_自检报告.md)）：
+MUSDB18-HQ test（50 首）上的完整锚点（cSDR，museval 中位数聚合，[P1 报告](results/P1_分离baseline.md)）：
 
-| 锚点 | uSDR 平均 | 作用 |
+| 锚点 | cSDR 平均 | 作用 |
 |---|---|---|
-| `silence` 输出全零 | **0.00 dB** | 解析已知值，验证实现正确 |
-| `trivial` 混音当每一轨 | -6.83 dB | **下界** |
-| `oracle` IRM 理想掩码 | 18.51 dB | **上界** |
+| `silence` 输出全零 | uSDR 恰为 **0.00 dB** | 解析已知值，验证实现正确 |
+| `trivial` 混音当每一轨 | -5.34 dB | **下界** |
+| `htdemucs` | **8.80 dB** | 复现官方 9.00 dB |
+| `oracle` IRM 理想掩码 | 8.95 dB | **掩码类方法的上界** |
 
-真实模型的成绩必须落在下界和上界之间 —— 落到外面就是代码错了。
+> IRM oracle 只是**掩码方法**的上界，不是通用上界 —— Demucs 直接生成波形、
+> 能修正相位，实测在 drums/bass 上已与它统计上不可区分（配对 bootstrap p=0.88 / 0.18）。
+> M0 时我预期 oracle 在 12~15 dB，那一档其实对应多通道维纳滤波 oracle，预期是错的。
 
 ---
 
@@ -96,5 +99,5 @@ python -m scripts.make_demo_stems && python -m http.server 8123
 ## 环境
 
 ```
-Apple M2 Max / 64GB · Python 3.13 · PyTorch 2.10 (MPS) · Node 24
+Apple M2 Max / 64GB · conda env `music-mix` (Python 3.11) · PyTorch 2.13 (MPS) · demucs 4.1.0 · Node 24
 ```

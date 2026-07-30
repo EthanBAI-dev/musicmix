@@ -16,6 +16,7 @@ from src.eval.separation import (
     evaluate_track,
     format_table,
     global_sdr,
+    ideal_binary_mask,
     ideal_ratio_mask,
     per_stem_matrix,
     si_sdr,
@@ -209,10 +210,13 @@ def test_evaluate_track_tolerates_length_mismatch():
 # --------------------------------------------------------------------------------------
 
 def test_irm_oracle_beats_trivial_baseline():
-    """**评测框架的整体自检。**
+    """**评测框架的整体自检**：区间的两端都算得对。
 
-    真实模型的成绩必须落在 [平凡基线, IRM oracle] 这个区间里。
-    这条测试同时验证了区间的两端都算得对。
+    Note:
+        原来这里写的是"真实模型的成绩必须落在 [平凡基线, IRM oracle] 之间"。
+        **M1 证明这句话只对掩码类方法成立。** Demucs 直接生成波形、能修正相位，
+        不受掩码天花板约束 —— 实测它在 drums/bass 上已与 IRM oracle 统计上不可区分。
+        所以 IRM 只是"掩码方法的上界"，不是通用上界。
     """
     refs, mixture = _toy_song(seconds=3.0)
 
@@ -253,6 +257,36 @@ def test_irm_oracle_preserves_shape():
     oracle = ideal_ratio_mask(refs, mixture)
     for stem in refs:
         assert oracle[stem].shape == mixture.shape
+
+
+def test_irm_beats_ibm():
+    """IRM（软掩码）必须优于 IBM（硬掩码）。
+
+    这是掩码实现的**交叉验证**：如果硬掩码反而更好，说明比值掩码或 iSTFT 写错了。
+    M1 在真实数据上量到的差距是 9.23 vs 8.81 dB。
+    """
+    refs, mixture = _toy_song(seconds=3.0)
+    n = mixture.shape[0]
+    irm = ideal_ratio_mask(refs, mixture)
+    ibm = ideal_binary_mask(refs, mixture)
+
+    irm_mean = np.mean([global_sdr(refs[s], match_length(irm[s], n)) for s in refs])
+    ibm_mean = np.mean([global_sdr(refs[s], match_length(ibm[s], n)) for s in refs])
+    assert irm_mean > ibm_mean, f"IRM {irm_mean:.2f} 竟不如 IBM {ibm_mean:.2f} dB"
+
+
+def test_ibm_mask_is_a_partition():
+    """IBM 是硬划分：四轨估计之和必须精确等于混音（每个时频点只归一个声部）。
+
+    这一条能抓到"胜者判定写错导致某些时频点被重复计入或漏掉"的错误。
+    """
+    refs, mixture = _toy_song(seconds=2.0)
+    ibm = ideal_binary_mask(refs, mixture)
+    total = sum(ibm.values())
+    n = min(mixture.shape[0], total.shape[0])
+    # iSTFT 的边界效应会带来极小误差，用相对量判断
+    err = np.max(np.abs(mixture[:n] - total[:n])) / np.max(np.abs(mixture))
+    assert err < 0.02, f"IBM 四轨之和与混音的相对偏差 {err:.4f} 过大，掩码不是硬划分"
 
 
 # --------------------------------------------------------------------------------------
