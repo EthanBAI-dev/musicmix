@@ -50,6 +50,9 @@ def main() -> int:
     p.add_argument("--variant", action="append", default=[], metavar="名称=csv路径")
     p.add_argument("--out", default="results/P2_消融实验.md")
     p.add_argument("--title", default="P2 路线 A：推理期增益消融")
+    p.add_argument("--notes", default="", metavar="FILE",
+                   help="把这个 markdown 文件的内容追加到表格之后。"
+                        "分析文字要和自动生成的表格分开存放，否则重跑脚本会把手写内容覆盖掉")
     args = p.parse_args()
 
     base_csv = Path(args.base)
@@ -128,6 +131,13 @@ def main() -> int:
             f"| {name} | {m.mean_diff:+.3f} dB | {'✅' if m.significant else '❌'} | "
             f"{'、'.join(up) or '—'} | {'、'.join(down) or '—'} |"
         )
+
+    if args.notes:
+        notes = Path(args.notes)
+        if notes.exists():
+            lines += ["", "---", "", notes.read_text(encoding="utf-8").rstrip()]
+        else:
+            print(f"⚠️  --notes {notes} 不存在，已跳过")
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
