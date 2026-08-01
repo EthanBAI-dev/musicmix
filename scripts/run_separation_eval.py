@@ -69,6 +69,11 @@ class EvalConfig:
     root: str = "data/musdb18hq"
     subset: str = "test"
     synthetic_seconds: float = 6.0
+    # --- P2 路线 A：推理期增益，各自独立开关，方便做逐项累加的消融 ---
+    tta: tuple[str, ...] = ()          # 空 = 不做 TTA
+    refine: str = ""                   # "" | "mask" | "mwf"
+    refine_alpha: float = 2.0
+    ensemble_models: tuple[str, ...] = ()   # 非空则忽略 model，改用这组模型集成
 
 
 # --------------------------------------------------------------------------------------
@@ -79,7 +84,11 @@ _SEPARATOR = None       # 每个进程各自缓存一份，避免每首歌重新
 
 
 def build_separator(cfg: EvalConfig):
-    """返回 ``(fn, label)``；``fn(mixture, references) -> {stem: (n,2)}``。"""
+    """返回 ``(fn, label)``；``fn(mixture, references) -> {stem: (n,2)}``。
+
+    真实模型的调用链（每一层都可单独关掉，这正是消融表的结构）：
+    ``模型推理 → [多模型集成] → [TTA 平均] → [软掩码 / MWF 细化]``
+    """
     if cfg.model == "silence":
         return (lambda mix, refs: silence_baseline(mix)), "silence（全零，自检）"
     if cfg.model == "trivial":
@@ -90,12 +99,32 @@ def build_separator(cfg: EvalConfig):
             return {k: match_length(v, mix.shape[0]) for k, v in est.items()}
         return _oracle, "oracle（IRM 理想掩码，上界）"
 
-    from src.separation import demucs_model
+    from src.separation import demucs_model, postprocess
 
-    sep = demucs_model.load(cfg.model, device=cfg.device, overlap=cfg.overlap, shifts=cfg.shifts)
-    label = f"{sep.name}（{sep.device}, overlap={sep.overlap}"
-    label += f", shifts={sep.shifts}）" if sep.shifts else "）"
-    return (lambda mix, refs: demucs_model.separate(sep, mix)), label
+    names = cfg.ensemble_models or (cfg.model,)
+    seps = [demucs_model.load(n, device=cfg.device, overlap=cfg.overlap, shifts=cfg.shifts)
+            for n in names]
+
+    def base(mix):
+        outs = [demucs_model.separate(s, mix) for s in seps]
+        return outs[0] if len(outs) == 1 else postprocess.ensemble(outs)
+
+    def run(mix, refs):
+        est = postprocess.apply_tta(base, mix, cfg.tta) if cfg.tta else base(mix)
+        if cfg.refine == "mask":
+            est = postprocess.soft_mask_refine(est, mix, alpha=cfg.refine_alpha)
+        elif cfg.refine == "mwf":
+            est = postprocess.multichannel_wiener(est, mix, alpha=cfg.refine_alpha)
+        return est
+
+    parts = ["+".join(names), f"overlap={cfg.overlap}"]
+    if cfg.shifts:
+        parts.append(f"shifts={cfg.shifts}")
+    if cfg.tta:
+        parts.append(f"TTA[{','.join(cfg.tta)}]")
+    if cfg.refine:
+        parts.append(f"refine={cfg.refine}(α={cfg.refine_alpha})")
+    return run, f"{seps[0].device} · " + " · ".join(parts)
 
 
 def get_separator(cfg: EvalConfig):
@@ -164,6 +193,8 @@ def run(args: argparse.Namespace) -> int:
         model=args.model, device=args.device, overlap=args.overlap, shifts=args.shifts,
         compute_csdr=compute_csdr, save_stems=args.save_stems,
         root=args.root, subset=args.subset, synthetic_seconds=args.synthetic_seconds,
+        tta=tuple(args.tta), refine=args.refine, refine_alpha=args.refine_alpha,
+        ensemble_models=tuple(args.ensemble),
     )
 
     # ---- 组装任务列表 ----
@@ -302,13 +333,23 @@ def run(args: argparse.Namespace) -> int:
 
 
 def _label_only(cfg: EvalConfig) -> str:
-    """并行模式下主进程不加载模型（免得白占一份显存），只生成标签。"""
+    """并行模式下主进程不加载模型（免得白占一份显存），只生成标签。
+
+    必须和 :func:`build_separator` 里的标签保持一致，否则结果表会标错配置 ——
+    消融表里标错配置比数字算错更难发现。
+    """
     if cfg.model in REFERENCE_MODELS:
         return {"silence": "silence（全零，自检）",
                 "trivial": "trivial（混音当每一轨，下界）",
                 "oracle": "oracle（IRM 理想掩码，上界）"}[cfg.model]
-    label = f"{cfg.model}（{cfg.device}, overlap={cfg.overlap}"
-    return label + (f", shifts={cfg.shifts}）" if cfg.shifts else "）")
+    parts = ["+".join(cfg.ensemble_models or (cfg.model,)), f"overlap={cfg.overlap}"]
+    if cfg.shifts:
+        parts.append(f"shifts={cfg.shifts}")
+    if cfg.tta:
+        parts.append(f"TTA[{','.join(cfg.tta)}]")
+    if cfg.refine:
+        parts.append(f"refine={cfg.refine}(α={cfg.refine_alpha})")
+    return f"{cfg.device} · " + " · ".join(parts)
 
 
 def main() -> int:
@@ -324,6 +365,14 @@ def main() -> int:
                    help="分块推理重叠率。官方默认 0.25，**做 baseline 不要改**")
     p.add_argument("--shifts", type=int, default=0,
                    help="随机时移 TTA 次数。>0 就不是 baseline 了（属 P2-A）")
+    p.add_argument("--tta", nargs="*", default=[],
+                   choices=("identity", "swap", "flip", "swap_flip"),
+                   help="测试时增强的变换列表。推理次数 = 变换数，RTF 线性增长")
+    p.add_argument("--refine", default="", choices=("", "mask", "mwf"),
+                   help="后处理：mask=软掩码(α-Wiener)，mwf=多通道维纳滤波")
+    p.add_argument("--refine-alpha", type=float, default=2.0)
+    p.add_argument("--ensemble", nargs="*", default=[],
+                   help="多模型集成，如 --ensemble htdemucs htdemucs_ft mdx_extra（会忽略 --model）")
     p.add_argument("--workers", type=int, default=1,
                    help="并行进程数。museval 是瓶颈，参照基线可开 6；GPU 模型建议 2~3")
     p.add_argument("--save-stems", default="", metavar="DIR",
