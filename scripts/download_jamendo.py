@@ -1,0 +1,200 @@
+"""按需下载 MTG-Jamendo 的音频分块。
+
+    python -m scripts.download_jamendo --chunks 20              # 下 00~19 块
+    python -m scripts.download_jamendo --chunks 20 --type audio-low
+    python -m scripts.download_jamendo --meta-only              # 只取元数据
+
+官方的 ``scripts/download/download.py`` 只能整包下（全量 audio 有 **530 GB**），
+而我们不需要全量。数据集按曲目 id 的**末两位**分成 100 个 tar 块，
+实测每块 556±22 首（变异系数 4%），所以**取前 N 块 = 一份干净的随机样本**。
+
+.. note::
+   **为什么下完一块就删 tar：** 20 块的 tar 有 106 GB，解压后又是 106 GB。
+   不删的话峰值要 212 GB。改成"下一块 → 校验 → 解压 → 删 tar"，
+   峰值就只比最终占用多一个块（5.3 GB）。
+
+.. warning::
+   MTG-Jamendo 的音频是 Jamendo 上的 CC 授权曲目，**元数据 CC BY-NC-SA 4.0，
+   仅限非商业研究与学术使用**；商业使用需 Jamendo S.A. 书面授权。
+   下载下来的音频**不要入 git、不要再分发**。
+"""
+
+from __future__ import annotations
+
+import argparse
+import shutil
+import subprocess
+import sys
+import tarfile
+import time
+from pathlib import Path
+
+MIRRORS = {
+    "mtg-fast": "https://cdn.freesound.org/mtg-jamendo",
+    "mtg": "https://essentia.upf.edu/documentation/datasets/mtg-jamendo",
+}
+META_BASE = "https://raw.githubusercontent.com/MTG/mtg-jamendo-dataset/master/data"
+
+# 实测每块大小（GB），用来估算总量和剩余时间
+CHUNK_GB = {"audio": 5.3, "audio-low": 1.65, "melspecs": 2.3}
+
+DEFAULT_ROOT = Path("data/jamendo")
+
+
+# --------------------------------------------------------------------------------------
+# 元数据
+# --------------------------------------------------------------------------------------
+
+META_FILES = [
+    "autotagging.tsv",
+    "autotagging_instrument.tsv",
+    "autotagging_moodtheme.tsv",
+    "autotagging_genre.tsv",
+    "autotagging_top50tags.tsv",
+]
+SPLIT_SUBSETS = ["autotagging", "autotagging_instrument", "autotagging_top50tags"]
+
+
+def fetch(url: str, dst: Path, quiet: bool = False) -> bool:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    cmd = ["curl", "-sfL", "--max-time", "600", "-o", str(dst), url]
+    ok = subprocess.run(cmd, check=False).returncode == 0
+    if not quiet:
+        print(("  ✅ " if ok else "  ❌ ") + dst.name + ("" if ok else f"  ← {url}"))
+    return ok
+
+
+def download_meta(root: Path, splits: tuple[int, ...] = (0,)) -> None:
+    """元数据只有几 MB，全下。"""
+    meta = root / "meta"
+    print(f"元数据 → {meta}")
+    for f in META_FILES:
+        fetch(f"{META_BASE}/{f}", meta / f)
+
+    # autotagging.tsv 只是一个**指向真实文件名的一行文本**，不是数据本身。
+    # 不解开这一层，后面读到的会是 31 字节的垃圾。
+    ptr = meta / "autotagging.tsv"
+    if ptr.exists() and ptr.stat().st_size < 200:
+        real = ptr.read_text(encoding="utf-8").strip()
+        print(f"  ℹ️  autotagging.tsv 是指针，实际文件为 {real}")
+        fetch(f"{META_BASE}/{real}", meta / "autotagging_real.tsv")
+
+    for s in splits:
+        for subset in SPLIT_SUBSETS:
+            for part in ("train", "validation", "test"):
+                name = f"{subset}-{part}.tsv"
+                fetch(f"{META_BASE}/splits/split-{s}/{name}",
+                      meta / "splits" / f"split-{s}" / name, quiet=True)
+        print(f"  ✅ split-{s} 的 train/validation/test")
+
+
+# --------------------------------------------------------------------------------------
+# 音频分块
+# --------------------------------------------------------------------------------------
+
+def chunk_url(mirror: str, dtype: str, idx: int) -> str:
+    return f"{MIRRORS[mirror]}/raw_30s/{dtype}/raw_30s_{dtype}-{idx:02d}.tar"
+
+
+def chunk_done(dest: Path, idx: int) -> bool:
+    """已解压的标志：对应的两位数字目录存在且非空。"""
+    d = dest / f"{idx:02d}"
+    return d.is_dir() and any(d.iterdir())
+
+
+def download_chunk(mirror: str, dtype: str, idx: int, dest: Path, keep_tar: bool) -> bool:
+    tar_path = dest / f"_tmp_{dtype}-{idx:02d}.tar"
+    url = chunk_url(mirror, dtype, idx)
+
+    # 不要用 --progress-bar：它每秒刷几十行，跑 20 块能把日志刷到几十 MB，
+    # 后台运行时尤其恶心。改成静默下载 + 下完后自己报速度。
+    t0 = time.perf_counter()
+    # -C - 断点续传：网络中断后重跑脚本会接着下，而不是从头来
+    r = subprocess.run(
+        ["curl", "-fL", "--retry", "5", "--retry-delay", "5", "-C", "-",
+         "--no-progress-meter", "-o", str(tar_path), url],
+        check=False,
+    )
+    dt = time.perf_counter() - t0
+    if r.returncode != 0:
+        print(f"  ❌ 块 {idx:02d} 下载失败（curl {r.returncode}）")
+        return False
+    mb = tar_path.stat().st_size / 2**20
+    print(f"  ↓ {mb:.0f} MB / {dt:.0f}s = {mb/max(dt,1e-6):.1f} MB/s", flush=True)
+
+    # 解压前先校验：tar 截断/损坏在这里就能发现，避免解出半个目录后才报错
+    try:
+        with tarfile.open(tar_path) as tf:
+            n = sum(1 for m in tf.getmembers() if m.isfile())
+    except Exception as e:
+        print(f"  ❌ 块 {idx:02d} 归档损坏：{e}（删掉重下）")
+        tar_path.unlink(missing_ok=True)
+        return False
+
+    with tarfile.open(tar_path) as tf:
+        tf.extractall(dest, filter="data")
+
+    if not keep_tar:
+        tar_path.unlink(missing_ok=True)     # 见模块 docstring：不删峰值翻倍
+    print(f"  ✅ 块 {idx:02d}：{n} 个文件")
+    return True
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(description="按需下载 MTG-Jamendo 音频分块")
+    p.add_argument("--chunks", type=int, default=20,
+                   help="下载前 N 块（每块约 556 首）。分块 = 曲目 id 末两位，取前 N 块即随机样本")
+    p.add_argument("--type", default="audio", choices=("audio", "audio-low", "melspecs"),
+                   help="audio=320k 立体声；audio-low=100k **单声道**（不适合做分离）")
+    p.add_argument("--mirror", default="mtg-fast", choices=tuple(MIRRORS))
+    p.add_argument("--root", default=str(DEFAULT_ROOT))
+    p.add_argument("--keep-tar", action="store_true", help="保留 tar（磁盘占用翻倍）")
+    p.add_argument("--meta-only", action="store_true")
+    args = p.parse_args()
+
+    root = Path(args.root)
+    download_meta(root)
+    if args.meta_only:
+        return 0
+
+    if args.type == "audio-low":
+        print("\n⚠️  audio-low 是**单声道** 100kbps。跑 demucs 分离会明显掉质量，"
+              "会给 stem-aware 实验引入混淆变量。确认这是你要的。")
+
+    dest = root / args.type
+    dest.mkdir(parents=True, exist_ok=True)
+    todo = [i for i in range(args.chunks) if not chunk_done(dest, i)]
+    done = args.chunks - len(todo)
+
+    est = len(todo) * CHUNK_GB[args.type]
+    print(f"\n{args.type}：共 {args.chunks} 块，已有 {done} 块，待下 {len(todo)} 块（约 {est:.0f} GB）")
+    free = shutil.disk_usage(root.parent if root.exists() else ".").free / 2**30
+    print(f"磁盘可用 {free:.0f} GB")
+    if free < est * 1.15:
+        print("❌ 磁盘空间不足（需要预留约 15% 余量给解压过程）", file=sys.stderr)
+        return 1
+    if not todo:
+        print("✅ 全部已就绪")
+        return 0
+
+    t0 = time.perf_counter()
+    failed = []
+    for k, idx in enumerate(todo, 1):
+        el = time.perf_counter() - t0
+        eta = el / max(k - 1, 1) * (len(todo) - k + 1) if k > 1 else 0
+        print(f"\n[{k}/{len(todo)}] 块 {idx:02d}" + (f"   已用 {el/60:.0f}min，剩余约 {eta/60:.0f}min" if k > 1 else ""))
+        if not download_chunk(args.mirror, args.type, idx, dest, args.keep_tar):
+            failed.append(idx)
+
+    total = sum(1 for d in dest.iterdir() if d.is_dir() and len(d.name) == 2 for _ in d.iterdir())
+    size = sum(f.stat().st_size for f in dest.rglob("*.mp3")) / 2**30
+    print(f"\n{'=' * 60}\n完成：{total} 个音频文件，{size:.0f} GB，耗时 {(time.perf_counter()-t0)/60:.0f} min")
+    if failed:
+        print(f"⚠️  {len(failed)} 块失败：{failed} —— 重跑本脚本会自动续传")
+        return 1
+    print("下一步：python -m scripts.jamendo_stats")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

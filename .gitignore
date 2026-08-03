@@ -1,4 +1,6 @@
 # === 数据：绝不入库 ===
+# MTG-Jamendo 的音频是 CC 授权曲目、元数据 CC BY-NC-SA 4.0 仅限非商业研究，
+# 不可再分发。元数据 tsv 也不入库（几十 MB，且 download_jamendo.py 能重新拉）。
 data/
 !data/.gitkeep
 *.wav

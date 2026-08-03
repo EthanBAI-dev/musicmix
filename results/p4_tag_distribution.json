@@ -1,0 +1,33 @@
+{
+  "n_tracks": 55609,
+  "n_tags": 195,
+  "total_hours": 3769.8761111110216,
+  "tags_per_track": 4.187847290906149,
+  "label_density": 0.021476139953364864,
+  "freq_max": 16480,
+  "freq_median": 509,
+  "freq_min": 119,
+  "head10pct_share": 0.48471758229489614,
+  "n_below_50": 0,
+  "by_category": {
+    "genre": {
+      "n_tags": 95,
+      "min": 121,
+      "median": 547,
+      "max": 16480
+    },
+    "instrument": {
+      "n_tags": 41,
+      "min": 157,
+      "median": 721,
+      "max": 7750
+    },
+    "mood/theme": {
+      "n_tags": 59,
+      "min": 119,
+      "median": 457,
+      "max": 1657
+    }
+  },
+  "scope": "全量元数据（55,609 首，不依赖本地音频）"
+}
