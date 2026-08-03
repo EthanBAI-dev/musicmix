@@ -149,6 +149,8 @@ def main() -> int:
     p.add_argument("--mirror", default="mtg-fast", choices=tuple(MIRRORS))
     p.add_argument("--root", default=str(DEFAULT_ROOT))
     p.add_argument("--keep-tar", action="store_true", help="保留 tar（磁盘占用翻倍）")
+    p.add_argument("--retries", type=int, default=3,
+                   help="失败的块自动重试几轮（半成品 tar 保留，续传不重下）")
     p.add_argument("--meta-only", action="store_true")
     args = p.parse_args()
 
@@ -186,11 +188,26 @@ def main() -> int:
         if not download_chunk(args.mirror, args.type, idx, dest, args.keep_tar):
             failed.append(idx)
 
+    # 失败的块自动重试。网络抖动导致单块中断是常态（实测 20 块里就断了一块），
+    # 每次都要人工重跑脚本很蠢。半成品 tar 保留着，-C - 会接着下而不是从头来。
+    for attempt in range(1, args.retries + 1):
+        if not failed:
+            break
+        print(f"\n{'=' * 60}\n第 {attempt}/{args.retries} 轮重试：{failed}")
+        retry, failed = failed, []
+        for idx in retry:
+            if chunk_done(dest, idx):
+                continue
+            print(f"\n[重试] 块 {idx:02d}")
+            if not download_chunk(args.mirror, args.type, idx, dest, args.keep_tar):
+                failed.append(idx)
+
     total = sum(1 for d in dest.iterdir() if d.is_dir() and len(d.name) == 2 for _ in d.iterdir())
     size = sum(f.stat().st_size for f in dest.rglob("*.mp3")) / 2**30
     print(f"\n{'=' * 60}\n完成：{total} 个音频文件，{size:.0f} GB，耗时 {(time.perf_counter()-t0)/60:.0f} min")
     if failed:
-        print(f"⚠️  {len(failed)} 块失败：{failed} —— 重跑本脚本会自动续传")
+        print(f"⚠️  重试 {args.retries} 轮后仍有 {len(failed)} 块失败：{failed}")
+        print("   半成品 tar 已保留，重跑本脚本会从断点继续。")
         return 1
     print("下一步：python -m scripts.jamendo_stats")
     return 0
