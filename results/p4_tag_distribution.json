@@ -1,33 +1,33 @@
 {
-  "n_tracks": 2210,
+  "n_tracks": 5404,
   "n_tags": 50,
-  "total_hours": 145.3132777777776,
-  "tags_per_track": 3.070588235294118,
-  "label_density": 0.06141176470588235,
-  "freq_max": 619,
-  "freq_median": 89,
-  "freq_min": 42,
-  "head10pct_share": 0.2796934865900383,
-  "n_below_50": 3,
+  "total_hours": 357.9716111111117,
+  "tags_per_track": 3.0988156920799406,
+  "label_density": 0.06197631384159882,
+  "freq_max": 1596,
+  "freq_median": 217,
+  "freq_min": 120,
+  "head10pct_share": 0.2816194912217843,
+  "n_below_50": 0,
   "by_category": {
     "genre": {
       "n_tags": 31,
-      "min": 42,
-      "median": 99,
-      "max": 619
+      "min": 120,
+      "median": 231,
+      "max": 1596
     },
     "instrument": {
       "n_tags": 14,
-      "min": 51,
-      "median": 96,
-      "max": 338
+      "min": 123,
+      "median": 227,
+      "max": 805
     },
     "mood/theme": {
       "n_tags": 5,
-      "min": 51,
-      "median": 57,
-      "max": 75
+      "min": 141,
+      "median": 155,
+      "max": 188
     }
   },
-  "scope": "本地子样本 · autotagging_top50tags · split-0（2210 首）"
+  "scope": "本地子样本 · autotagging_top50tags · split-0（5404 首）"
 }

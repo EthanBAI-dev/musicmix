@@ -96,10 +96,36 @@ def chunk_url(mirror: str, dtype: str, idx: int) -> str:
     return f"{MIRRORS[mirror]}/raw_30s/{dtype}/raw_30s_{dtype}-{idx:02d}.tar"
 
 
-def chunk_done(dest: Path, idx: int) -> bool:
-    """已解压的标志：对应的两位数字目录存在且非空。"""
+def remote_size(url: str) -> int | None:
+    """服务器上的文件字节数（HEAD 的 Content-Length）。取不到返回 None。"""
+    r = subprocess.run(
+        ["curl", "-fsIL", "--max-time", "30", url], capture_output=True, text=True, check=False)
+    if r.returncode != 0:
+        return None
+    for line in reversed(r.stdout.splitlines()):      # 跟随重定向后取最后一段响应头
+        if line.lower().startswith("content-length:"):
+            try:
+                return int(line.split(":", 1)[1].strip())
+            except ValueError:
+                return None
+    return None
+
+
+def chunk_done(dest: Path, idx: int, expected: int | None = None) -> bool:
+    """该块是否已经**完整**解压。
+
+    只看"目录存在且非空"是不够的 —— 截断的 tar 会解出一个非空但残缺的目录，
+    重跑脚本时会被当成已完成直接跳过，残缺就永远留在那儿了。
+    传入 ``expected``（元数据里该块应有的曲目数）才能真正判定。
+    """
     d = dest / f"{idx:02d}"
-    return d.is_dir() and any(d.iterdir())
+    if not (d.is_dir() and any(d.iterdir())):
+        return False
+    if expected is None:
+        return True
+    have = sum(1 for _ in d.glob("*.mp3"))
+    # 留 2% 容差：元数据与实际发布的文件本来就有个位数出入
+    return have >= expected * 0.98
 
 
 # curl 的网络类退出码。这些代表"网线断了"而不是"这个文件有问题"，
@@ -148,10 +174,21 @@ def download_chunk(
         print(f"  ❌ 块 {idx:02d} 下载失败（curl {r.returncode}）")
         return False
 
-    mb = tar_path.stat().st_size / 2**20
+    size = tar_path.stat().st_size
+    mb = size / 2**20
     print(f"  ↓ {mb:.0f} MB / {dt:.0f}s = {mb/max(dt,1e-6):.1f} MB/s", flush=True)
 
-    # 解压前先校验：tar 截断/损坏在这里就能发现，避免解出半个目录后才报错
+    # **必须先比字节数。** 血泪教训：断点续传后拿到一个被截断的 tar，
+    # 而 tarfile 顺序读到断点就停下、**不报错**，于是"校验通过"、解出 191/556 个文件，
+    # 脚本高高兴兴打印 ✅ —— 静默丢了 6.8% 的数据，直到训练时才发现缺文件。
+    # 光验"能不能读"是不够的，必须验"完不完整"。
+    expected = remote_size(url)
+    if expected and size != expected:
+        print(f"  ❌ 块 {idx:02d} 不完整：本地 {size:,} B，服务器 {expected:,} B"
+              f"（差 {(expected-size)/2**20:.0f} MB）→ 删掉重下")
+        tar_path.unlink(missing_ok=True)
+        return False
+
     try:
         with tarfile.open(tar_path) as tf:
             n = sum(1 for m in tf.getmembers() if m.isfile())
@@ -167,6 +204,25 @@ def download_chunk(
         tar_path.unlink(missing_ok=True)     # 见模块 docstring：不删峰值翻倍
     print(f"  ✅ 块 {idx:02d}：{n} 个文件")
     return True
+
+
+def expected_per_chunk(root: Path) -> dict[int, int]:
+    """从元数据统计每块应有多少首。用来判定解压是否完整。"""
+    tsv = root / "meta" / "autotagging_real.tsv"
+    if not tsv.exists():
+        return {}
+    counts: dict[int, int] = {}
+    with open(tsv, encoding="utf-8") as f:
+        next(f, "")
+        for line in f:
+            parts = line.split("\t")
+            if len(parts) >= 4:
+                try:
+                    c = int(parts[3].split("/")[0])
+                except ValueError:
+                    continue
+                counts[c] = counts.get(c, 0) + 1
+    return counts
 
 
 def main() -> int:
@@ -194,7 +250,9 @@ def main() -> int:
 
     dest = root / args.type
     dest.mkdir(parents=True, exist_ok=True)
-    todo = [i for i in range(args.chunks) if not chunk_done(dest, i)]
+    expected_counts = expected_per_chunk(root)
+    todo = [i for i in range(args.chunks)
+            if not chunk_done(dest, i, expected_counts.get(i))]
     done = args.chunks - len(todo)
 
     est = len(todo) * CHUNK_GB[args.type]
@@ -225,7 +283,7 @@ def main() -> int:
         print(f"\n{'=' * 60}\n第 {attempt}/{args.retries} 轮重试：{failed}")
         retry, failed = failed, []
         for idx in retry:
-            if chunk_done(dest, idx):
+            if chunk_done(dest, idx, expected_counts.get(idx)):
                 continue
             print(f"\n[重试] 块 {idx:02d}")
             if not download_chunk(args.mirror, args.type, idx, dest, args.keep_tar):
