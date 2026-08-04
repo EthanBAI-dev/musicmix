@@ -1,33 +1,33 @@
 {
-  "n_tracks": 55609,
-  "n_tags": 195,
-  "total_hours": 3769.8761111110216,
-  "tags_per_track": 4.187847290906149,
-  "label_density": 0.021476139953364864,
-  "freq_max": 16480,
-  "freq_median": 509,
-  "freq_min": 119,
-  "head10pct_share": 0.48471758229489614,
-  "n_below_50": 0,
+  "n_tracks": 2210,
+  "n_tags": 50,
+  "total_hours": 145.3132777777776,
+  "tags_per_track": 3.070588235294118,
+  "label_density": 0.06141176470588235,
+  "freq_max": 619,
+  "freq_median": 89,
+  "freq_min": 42,
+  "head10pct_share": 0.2796934865900383,
+  "n_below_50": 3,
   "by_category": {
     "genre": {
-      "n_tags": 95,
-      "min": 121,
-      "median": 547,
-      "max": 16480
+      "n_tags": 31,
+      "min": 42,
+      "median": 99,
+      "max": 619
     },
     "instrument": {
-      "n_tags": 41,
-      "min": 157,
-      "median": 721,
-      "max": 7750
+      "n_tags": 14,
+      "min": 51,
+      "median": 96,
+      "max": 338
     },
     "mood/theme": {
-      "n_tags": 59,
-      "min": 119,
-      "median": 457,
-      "max": 1657
+      "n_tags": 5,
+      "min": 51,
+      "median": 57,
+      "max": 75
     }
   },
-  "scope": "全量元数据（55,609 首，不依赖本地音频）"
+  "scope": "本地子样本 · autotagging_top50tags · split-0（2210 首）"
 }

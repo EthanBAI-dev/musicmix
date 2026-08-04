@@ -102,23 +102,52 @@ def chunk_done(dest: Path, idx: int) -> bool:
     return d.is_dir() and any(d.iterdir())
 
 
-def download_chunk(mirror: str, dtype: str, idx: int, dest: Path, keep_tar: bool) -> bool:
+# curl 的网络类退出码。这些代表"网线断了"而不是"这个文件有问题"，
+# 遇到它们应当**等一等重试同一块**，而不是判死往下走。
+# 血泪教训：一次 DNS 抖动（curl 6）让剩余 16 块在 2 分钟内全部"失败"，
+# 白白浪费了一整轮。
+NETWORK_ERRORS = {
+    5:  "无法解析代理",
+    6:  "DNS 解析失败",
+    7:  "无法连接",
+    28: "超时",
+    35: "SSL 握手失败",
+    52: "服务器无响应",
+    55: "发送失败",
+    56: "接收失败",
+}
+
+
+def download_chunk(
+    mirror: str, dtype: str, idx: int, dest: Path, keep_tar: bool,
+    net_retries: int = 6, backoff: float = 20.0,
+) -> bool:
     tar_path = dest / f"_tmp_{dtype}-{idx:02d}.tar"
     url = chunk_url(mirror, dtype, idx)
 
-    # 不要用 --progress-bar：它每秒刷几十行，跑 20 块能把日志刷到几十 MB，
-    # 后台运行时尤其恶心。改成静默下载 + 下完后自己报速度。
-    t0 = time.perf_counter()
-    # -C - 断点续传：网络中断后重跑脚本会接着下，而不是从头来
-    r = subprocess.run(
-        ["curl", "-fL", "--retry", "5", "--retry-delay", "5", "-C", "-",
-         "--no-progress-meter", "-o", str(tar_path), url],
-        check=False,
-    )
-    dt = time.perf_counter() - t0
-    if r.returncode != 0:
+    for attempt in range(net_retries + 1):
+        # 不要用 --progress-bar：它每秒刷几十行，跑 20 块能把日志刷到几十 MB，
+        # 后台运行时尤其恶心。改成静默下载 + 下完后自己报速度。
+        t0 = time.perf_counter()
+        # -C - 断点续传：网络中断后接着下，而不是从头来
+        r = subprocess.run(
+            ["curl", "-fL", "--retry", "5", "--retry-delay", "5", "-C", "-",
+             "--no-progress-meter", "-o", str(tar_path), url],
+            check=False,
+        )
+        dt = time.perf_counter() - t0
+        if r.returncode == 0:
+            break
+        if r.returncode in NETWORK_ERRORS and attempt < net_retries:
+            wait = backoff * 2**attempt          # 20s → 40 → 80 → …，最长约 10 分钟
+            got = tar_path.stat().st_size / 2**20 if tar_path.exists() else 0
+            print(f"  ⏳ 块 {idx:02d} 网络中断（curl {r.returncode}：{NETWORK_ERRORS[r.returncode]}），"
+                  f"已下 {got:.0f} MB，{wait:.0f}s 后续传（第 {attempt+1}/{net_retries} 次）", flush=True)
+            time.sleep(wait)
+            continue
         print(f"  ❌ 块 {idx:02d} 下载失败（curl {r.returncode}）")
         return False
+
     mb = tar_path.stat().st_size / 2**20
     print(f"  ↓ {mb:.0f} MB / {dt:.0f}s = {mb/max(dt,1e-6):.1f} MB/s", flush=True)
 
