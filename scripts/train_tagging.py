@@ -19,9 +19,12 @@ from torch.utils.data import DataLoader
 
 from src.datasets.jamendo import DEFAULT_ROOT, load_split
 from src.tagging.backbone import MERT_95M, BackboneConfig, frame_cache_path
-from src.tagging.dataset import FeatureDataset, MelDataset, compute_norm_stats
+from scripts.extract_stem_features import stem_cache_path
+from src.tagging.dataset import (
+    FeatureDataset, MelDataset, StemFeatureDataset, compute_norm_stats)
 from src.tagging.features import MelConfig
-from src.tagging.models import AttentionPoolHead, LinearProbe, MelCNN, count_params
+from src.tagging.models import (
+    AttentionPoolHead, LinearProbe, MelCNN, StemFusionHead, count_params)
 from src.tagging.train import TrainConfig, save_result, train
 
 
@@ -34,6 +37,8 @@ def main() -> int:
     p.add_argument("--layer", type=int, default=7,
                    help="取基座第几层。默认 7 —— 由 scripts.probe_layers 用数据选出，不是猜的")
     p.add_argument("--frame-stride", type=int, default=5)
+    p.add_argument("--fusion", default="gate", choices=("concat", "gate", "sum"),
+                   help="L5 的融合方式。sum 零额外参数，是「分离是否提供新信息」的最强证据")
     p.add_argument("--pooling", default="",
                    help="mean / max / attention。留空则 L1 用 mean、L2 用 attention")
     p.add_argument("--subset", default="autotagging_top50tags")
@@ -56,7 +61,7 @@ def main() -> int:
     parts, vocab = load_split(args.subset, args.split, root=root, only_local=True)
 
     # 阶梯与架构的默认对应；显式传 --arch 可以覆盖（做消融时用）
-    arch = args.arch or {"L0": "melcnn"}.get(args.level.upper(), "attnhead")
+    arch = args.arch or {"L0": "melcnn", "L5": "stemfusion"}.get(args.level.upper(), "attnhead")
     if not args.arch and args.level.upper() == "L1":
         arch = "linear"
     pooling = args.pooling or ("mean" if arch == "linear" else "attention")
@@ -106,7 +111,28 @@ def main() -> int:
             if len(paths) < len(parts[n]):
                 print(f"  ⚠️  {n}: {len(parts[n]) - len(paths)} 首缺特征，已剔除")
         loaders = kept
-        if arch == "linear":
+        if arch == "stemfusion":
+            # 顺序固定：mixture 在前，4 个 stem 按 StemFeatureDataset.SOURCES 排
+            kept2 = {}
+            for n in ("train", "validation", "test"):
+                rows, keep = [], []
+                for i, t in enumerate(parts[n]):
+                    ps = [frame_cache_path(t.path, root, cfg_bb)] + [
+                        stem_cache_path(t.path, root, cfg_bb, s_) for s_ in ("vocals", "drums", "bass", "other")]
+                    if all(x.exists() for x in ps):
+                        rows.append(ps); keep.append(i)
+                if not rows:
+                    raise FileNotFoundError(
+                        f"{n} 没有完整的 stem 特征。先跑：python -m scripts.extract_stem_features")
+                if len(rows) < len(parts[n]):
+                    print(f"  ⚠️  {n}: {len(parts[n]) - len(rows)} 首缺 stem 特征，已剔除")
+                y = vocab.encode([parts[n][i] for i in keep])
+                kept2[n] = wrap(StemFeatureDataset(rows, y), n == "train")
+            loaders = kept2
+            model = StemFusionHead(dim=dim, n_tags=len(vocab), sources=5,
+                                   fusion=args.fusion, pooling=pooling)
+            desc = f"StemFusionHead(dim={dim}, fusion={args.fusion}, pooling={pooling})"
+        elif arch == "linear":
             model = LinearProbe(dim=dim, n_tags=len(vocab), pooling=pooling)
             desc = f"LinearProbe(dim={dim}, pooling={pooling})"
         else:
@@ -140,6 +166,12 @@ def main() -> int:
         for g, gs in t.groups.items():
             print(f"  {g:<12} 标签 {gs.n_valid_tags:>2}/{gs.n_tags:<2}  "
                   f"mAP={gs.map:.4f}  MacroF1@tuned={gs.macro_f1_tuned:.4f}")
+    w = getattr(model, "source_weights", lambda: None)()
+    if w is not None:
+        print("\n各来源的门控权重（模型认为哪个更有用）：")
+        for name, val in zip(StemFeatureDataset.SOURCES, w.tolist(), strict=True):
+            print(f"  {name:<9}{val:.4f}")
+
     if t:
         gain = t.macro_f1_tuned - t.macro_f1_default
         print(f"\n阈值优化带来的 Macro-F1 提升：{gain:+.4f}"

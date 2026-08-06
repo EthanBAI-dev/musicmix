@@ -119,3 +119,35 @@ def compute_norm_stats(tracks: list[Track], root: Path, cfg: MelConfig = MelConf
         raise FileNotFoundError("没有任何特征缓存，先跑 python -m scripts.extract_mel")
     cat = np.concatenate(vals)
     return float(cat.mean()), float(cat.std() + 1e-8)
+
+
+class StemFeatureDataset(Dataset):
+    """混音 + 4 个分离声部的特征，堆成 ``(S, T, D)``。给 L5 用。
+
+    每个样本读 5 个 ``.npy``。这比单来源慢 5 倍，但特征已经是 float16 且降采样到
+    15 Hz，一首才 0.7 MB —— 实测 DataLoader 不是瓶颈。
+
+    .. important::
+       **来源顺序固定为 ``(mixture, vocals, drums, bass, other)``**，
+       因为 gate 融合训完要按这个顺序读出权重做可解释性分析。
+       顺序一变，"模型倚重哪个 stem"的结论就全错了。
+    """
+
+    SOURCES = ("mixture", "vocals", "drums", "bass", "other")
+
+    def __init__(self, source_paths: list[list[Path]], labels: np.ndarray):
+        if len(source_paths) != len(labels):
+            raise ValueError("样本数与标签数不一致")
+        self.paths = source_paths
+        self.labels = labels.astype(np.float32)
+
+    def __len__(self) -> int:
+        return len(self.paths)
+
+    def __getitem__(self, i: int):
+        xs = [np.load(p).astype(np.float32) for p in self.paths[i]]
+        # 各来源帧数应当一致（同一段音频、同样的 stride），但 iSTFT 边界
+        # 可能差一两帧，统一截到最短，避免 stack 报形状错
+        t = min(x.shape[0] for x in xs)
+        return (torch.from_numpy(np.stack([x[:t] for x in xs])),
+                torch.from_numpy(self.labels[i]))

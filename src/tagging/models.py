@@ -152,3 +152,73 @@ class AttentionPoolHead(nn.Module):
 
 def count_params(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+# --------------------------------------------------------------------------------------
+# L5：Stem-aware 融合 ★ 本项目唯一的原创点
+# --------------------------------------------------------------------------------------
+
+class StemFusionHead(nn.Module):
+    """把「混音 + 4 个分离声部」的特征融合后做标签预测。
+
+    检验的假设（[00-总体大纲] P4-L5）：
+
+    - **H1**：Stem-aware 融合能提升标签性能
+    - **H2**（更强）：**提升主要来自乐器类标签**，风格次之，情绪最少
+
+    .. important::
+       **融合方式必须做消融，否则归因不成立。**
+       如果只报「加了 stem 之后 mAP 涨了」，无法区分两件事：
+       ① 分离真的提供了新信息；② 只是特征量多了 5 倍、参数多了 5 倍。
+
+       所以这里提供三种融合，参数量差异很大，**必须一起报**：
+
+       ``concat``  直接拼接 5 份池化后的特征 → 参数 ×5，最朴素
+       ``gate``    学一组标量权重决定每个来源的贡献 → 参数几乎不增，**归因最干净**
+       ``sum``     等权相加 → **参数完全不增**，是「分离是否提供新信息」的最强证据
+
+       如果 ``sum``（零额外参数）就能涨，那涨的确实是信息量而不是模型容量。
+
+    Args:
+        sources: 参与融合的来源数（混音 + 4 stems = 5）。
+    """
+
+    def __init__(self, dim: int, n_tags: int, sources: int = 5, hidden: int = 512,
+                 fusion: str = "gate", pooling: str = "mean", dropout: float = 0.3):
+        super().__init__()
+        if fusion not in ("concat", "gate", "sum"):
+            raise ValueError(f"未知融合方式 {fusion!r}，可选 concat / gate / sum")
+        self.fusion, self.pooling, self.sources = fusion, pooling, sources
+        self.attn = AttentionPool(dim) if pooling == "attention" else None
+
+        if fusion == "gate":
+            # 每个来源一个可学标量，softmax 归一化 —— 训完还能直接读出
+            # 「模型认为哪个 stem 有用」，这本身就是可解释性证据
+            self.logits = nn.Parameter(torch.zeros(sources))
+
+        in_dim = dim * sources if fusion == "concat" else dim
+        self.mlp = nn.Sequential(
+            nn.LayerNorm(in_dim),
+            nn.Dropout(dropout),
+            nn.Linear(in_dim, hidden),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden, n_tags),
+        )
+
+    def source_weights(self) -> torch.Tensor | None:
+        """gate 融合下各来源的归一化权重。训完打印出来看模型倚重哪个 stem。"""
+        return torch.softmax(self.logits, dim=0) if self.fusion == "gate" else None
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """``x``: ``(B, S, T, D)`` —— S 个来源各自的逐帧特征。"""
+        b, s, t, d = x.shape
+        pooled = pool_frames(x.reshape(b * s, t, d), self.pooling, self.attn).reshape(b, s, d)
+
+        if self.fusion == "concat":
+            fused = pooled.reshape(b, s * d)
+        elif self.fusion == "gate":
+            fused = (pooled * self.source_weights().view(1, s, 1)).sum(dim=1)
+        else:                                   # sum：零额外参数
+            fused = pooled.mean(dim=1)
+        return self.mlp(fused)
