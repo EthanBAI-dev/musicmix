@@ -662,6 +662,67 @@ function redrawAll() {
   drawFrame();
 }
 
+/* ============================ 上传并分离 ============================ */
+
+/* 分离一首 4 分钟的歌要几十秒，所以必须异步：POST 拿 job_id，然后轮询。
+ * 进度按**阶段**报（解码 / 分离 / 编码），不编百分比 ——
+ * 分离是一次不可分割的前向，中途拿不到真实进度，
+ * 一个匀速爬升的假进度条只会在卡住时误导人。 */
+
+function showUpload(text, sub = '', state = '') {
+  const bar = $('uploadBar');
+  bar.hidden = false;
+  bar.className = 'upload-bar' + (state ? ' ' + state : '');
+  $('upName').textContent = text;
+  $('upStage').textContent = sub;
+  $('upDismiss').hidden = !state;          // 只有终态才给关闭按钮
+}
+
+async function uploadAndSeparate(file) {
+  const mb = file.size / 2 ** 20;
+  showUpload(file.name, `上传中… ${mb.toFixed(0)} MB`);
+
+  let job;
+  try {
+    const r = await fetch('/api/separate', {
+      method: 'POST',
+      // HTTP 头只能带 ASCII，所以百分号编码；服务端会 unquote 回来。
+      // 别再把 % 换成别的字符 —— 那样中文名会被永久毁掉。
+      headers: { 'X-Filename': encodeURIComponent(file.name) },
+      body: file,
+    });
+    job = await r.json();
+    if (!r.ok) throw new Error(job.error || `HTTP ${r.status}`);
+  } catch (e) {
+    // 静态服务器（python -m http.server）没有这个接口，给出可操作的提示
+    showUpload(file.name, `上传失败：${e.message}。确认服务器是 python -m scripts.serve`, 'err');
+    return;
+  }
+
+  const t0 = performance.now();
+  while (true) {
+    await new Promise((r) => setTimeout(r, 700));
+    let st;
+    try {
+      st = await fetch(`/api/jobs/${job.id}`).then((r) => r.json());
+    } catch (_) { continue; }              // 轮询偶发失败不该中断整个流程
+
+    const sec = ((performance.now() - t0) / 1000).toFixed(0);
+    if (st.status === 'done') {
+      showUpload(file.name, `完成，耗时 ${st.elapsed}s`, 'ok');
+      await loadCaseManifest();            // 重新拉 manifest，新曲目才会出现在下拉里
+      $('caseSelect').value = st.track_id;
+      await loadCase(st.track_id);
+      return;
+    }
+    if (st.status === 'error') {
+      showUpload(file.name, `失败：${st.error}`, 'err');
+      return;
+    }
+    showUpload(file.name, `${st.stage}… ${sec}s`);
+  }
+}
+
 /* ============================ 失败案例听审 ============================ */
 
 /* 核心是 A/B：分离结果与真值用同一套 UI、同一个播放位置，
@@ -670,16 +731,33 @@ function redrawAll() {
 const CASES = { manifest: null, current: null, source: 'est', buffers: { est: {}, truth: {} } };
 
 async function loadCaseManifest() {
-  try {
-    const r = await fetch('cases/manifest.json');
-    if (!r.ok) return;
-    CASES.manifest = await r.json();
-  } catch (_) { return; }
+  // 两个来源：P1 的失败案例（有真值、有 SDR）+ 用户自己导入分离的曲目（无真值）
+  const grab = async (url) => {
+    try {
+      const r = await fetch(url);
+      return r.ok ? (await r.json()).cases || [] : [];
+    } catch (_) { return []; }
+  };
+  const [cases, mine] = await Promise.all([
+    grab('cases/manifest.json'), grab('mine/manifest.json'),
+  ]);
+  if (!cases.length && !mine.length) return;
+  CASES.manifest = { cases: [...cases, ...mine] };
 
   const sel = $('caseSelect');
-  sel.innerHTML = '<option value="">— 合成演示曲 —</option>' + CASES.manifest.cases
-    .map((c) => `<option value="${c.id}">${c.tag === 'worst' ? '⚠️' : '✅'} `
-              + `${c.csdr_mean.toFixed(2)} dB — ${c.track}</option>`).join('');
+  const opt = (c) => {
+    // 自己导入的没有真值，因此没有 SDR 可报 —— 不能拿别处的数字冒充
+    const label = c.csdr_mean == null
+      ? `🎵 ${c.track}`
+      : `${c.tag === 'worst' ? '⚠️' : '✅'} ${c.csdr_mean.toFixed(2)} dB — ${c.track}`;
+    return `<option value="${c.id}">${label}</option>`;
+  };
+  const group = (name, items) =>
+    items.length ? `<optgroup label="${name}">${items.map(opt).join('')}</optgroup>` : '';
+
+  sel.innerHTML = '<option value="">— 合成演示曲 —</option>'
+    + group('我的曲目（本地分离）', mine)
+    + group('P1 失败案例（含真值对照）', cases);
   $('casesBar').hidden = false;
 
   sel.addEventListener('change', (e) => {
@@ -715,6 +793,8 @@ async function loadCase(id) {
     CASES.current = c;
     CASES.buffers = { est, truth };
     CASES.source = 'est';
+    // 自己导入的曲目没有真值，A/B 无从比起 —— 直接隐藏，而不是留一个点了没反应的按钮
+    $('abToggle').hidden = !Object.keys(truth).length;
     syncAbButtons();
 
     buildTrackRows();
@@ -726,7 +806,9 @@ async function loadCase(id) {
     }
 
     S.analysis = null;                    // 真实曲目还没有分析结果，等 P3
-    S.srcLabel = `${c.tag === 'worst' ? '失败案例' : '对照'}：${c.track}（cSDR ${c.csdr_mean} dB）`;
+    S.srcLabel = c.csdr_mean == null
+      ? `我的曲目：${c.track}（${c.model || 'htdemucs'} 分离）`
+      : `${c.tag === 'worst' ? '失败案例' : '对照'}：${c.track}（cSDR ${c.csdr_mean} dB）`;
     finishLoad();
     renderCaseDiag(c);
   } catch (err) {
@@ -767,6 +849,21 @@ function syncAbButtons() {
 /** 逐声部标注：低 SDR 是「真实算法失败」还是「该轨本来就很轻」造成的指标假象。 */
 function renderCaseDiag(c) {
   const el = $('caseDiag');
+
+  // 没有真值就没有 SDR。此时只报各轨能量 —— 这是唯一诚实可给的客观信息，
+  // 绝不拿别的数字冒充「质量」。
+  if (!c.stems) {
+    const rms = c.stem_rms_db || {};
+    el.innerHTML = STEMS.map(({ id: s, zh, color }) => `
+      <div class="diag" style="--c:${color}">
+        <div class="stem">${s} · ${zh}</div>
+        <b>${rms[s] != null ? rms[s].toFixed(1) + ' dBFS' : '—'}</b>
+        <div class="why">无真值，无法算 SDR</div>
+      </div>`).join('');
+    el.hidden = false;
+    return;
+  }
+
   el.innerHTML = STEMS.map(({ id: s, zh, color }) => {
     const d = c.stems[s];
     let cls = 'why-ok', why = '正常';
@@ -978,6 +1075,13 @@ function bindGlobal() {
   });
 
   $('exportBtn').addEventListener('click', exportWav);
+
+  $('uploadInput').addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    if (f) uploadAndSeparate(f);
+    e.target.value = '';                   // 清空，否则连传同一个文件不会触发 change
+  });
+  $('upDismiss').addEventListener('click', () => { $('uploadBar').hidden = true; });
   $('fileInput').addEventListener('change', (e) => { if (e.target.files.length) loadUserFiles(e.target.files); });
   $('resetDemo').addEventListener('click', loadDemo);
 

@@ -25,6 +25,10 @@ data/
 web/cases/**
 !web/cases/manifest.json
 
+# 用户自己上传分离的曲目：是他人的版权音乐，绝不入库
+web/mine/**
+data/_uploads/**
+
 # === 模型权重 ===
 checkpoints/
 *.ckpt

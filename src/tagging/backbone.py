@@ -45,11 +45,13 @@ class BackboneConfig:
     layer: int = 6                 # 默认取中间层；正式取值由 scripts.probe_layers 决定
     frame_stride: int = 5          # 75 Hz → 15 Hz
     clip_seconds: float = 30.0
+    n_segments: int = 1            # >1 则在全曲上均匀取多段，特征沿时间轴拼接
 
     def tag(self) -> str:
         """缓存目录名。参数一变就换目录，避免读到用旧参数算的特征。"""
         short = self.name.split("/")[-1]
-        return f"{short}_L{self.layer}_s{self.frame_stride}_{self.clip_seconds:.0f}s"
+        seg = f"_x{self.n_segments}" if self.n_segments > 1 else ""
+        return f"{short}_L{self.layer}_s{self.frame_stride}_{self.clip_seconds:.0f}s{seg}"
 
 
 def pick_device(prefer: str = "auto") -> torch.device:
@@ -97,6 +99,38 @@ class Backbone:
             y = np.pad(y, (0, need - len(y)))     # 补零而非循环，循环会造出原曲没有的结构
         return y
 
+    def load_segments(self, path: Path) -> list[np.ndarray]:
+        """在**全曲**上均匀取 ``n_segments`` 段，每段 ``clip_seconds`` 秒。
+
+        为什么要这个：MTG-Jamendo 曲目平均 244 秒，只取中间 30 秒等于
+        **只看了 12% 的内容**就要判断风格/乐器/情绪。
+        多段覆盖是验证「30 秒够不够」这个假设的最直接手段，
+        而且只需重提特征、不用碰模型。
+
+        取段方式是**等间隔覆盖全曲**（含头尾留白），不是随机采样 ——
+        评测要可复现。
+        """
+        import librosa
+
+        n = self.cfg.n_segments
+        if n <= 1:
+            return [self.load_audio(path)]
+
+        dur = librosa.get_duration(path=str(path))
+        clip = self.cfg.clip_seconds
+        need = int(clip * self.sr)
+        span = max(0.0, dur - clip)
+        # n 段的起点等间隔铺满 [0, dur-clip]；曲子太短时全部退化到 0
+        starts = [span * i / (n - 1) for i in range(n)] if span > 0 else [0.0] * n
+
+        out = []
+        for st in starts:
+            y, _ = librosa.load(str(path), sr=self.sr, mono=True, offset=st, duration=clip)
+            if len(y) < need:
+                y = np.pad(y, (0, need - len(y)))
+            out.append(y)
+        return out
+
     @torch.no_grad()
     def extract(self, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """一次前向同时产出两样东西。
@@ -126,7 +160,13 @@ def frame_cache_path(track_path: str, root: Path, cfg: BackboneConfig) -> Path:
 
 
 def layer_cache_path(track_path: str, root: Path, cfg: BackboneConfig) -> Path:
-    """逐层平均单独存一份，和 layer / frame_stride 无关，所以目录名里不带这两项。"""
+    """逐层平均单独存一份，和 layer / frame_stride 无关，所以目录名里不带这两项。
+
+    但**必须带 n_segments** —— 多段的逐层平均是跨段平均后的结果，
+    和单段完全不是一回事。不区分的话多段提取会静默覆盖单段的缓存，
+    之后的选层探针读到的就是混杂数据（而且不会报错）。
+    """
     short = cfg.name.split("/")[-1]
-    return (root / "features" / f"{short}_layermeans_{cfg.clip_seconds:.0f}s"
+    seg = f"_x{cfg.n_segments}" if cfg.n_segments > 1 else ""
+    return (root / "features" / f"{short}_layermeans_{cfg.clip_seconds:.0f}s{seg}"
             / track_path.replace(".mp3", ".npy"))

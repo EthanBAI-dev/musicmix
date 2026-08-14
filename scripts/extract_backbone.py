@@ -38,6 +38,8 @@ def main() -> int:
     p.add_argument("--layer", type=int, default=6)
     p.add_argument("--frame-stride", type=int, default=5, help="75Hz → 75/stride Hz")
     p.add_argument("--clip-seconds", type=float, default=30.0)
+    p.add_argument("--segments", type=int, default=1,
+                   help="在全曲上均匀取几段。>1 时特征沿时间轴拼接，用来验证「30 秒够不够」")
     p.add_argument("--subset", default="autotagging_top50tags")
     p.add_argument("--split", type=int, default=0)
     p.add_argument("--root", default=str(DEFAULT_ROOT))
@@ -48,7 +50,8 @@ def main() -> int:
     args = p.parse_args()
 
     cfg = BackboneConfig(name=args.model, layer=args.layer,
-                         frame_stride=args.frame_stride, clip_seconds=args.clip_seconds)
+                         frame_stride=args.frame_stride, clip_seconds=args.clip_seconds,
+                         n_segments=args.segments)
     root = Path(args.root)
 
     parts, vocab = load_split(args.subset, args.split, root=root, only_local=True)
@@ -73,7 +76,11 @@ def main() -> int:
             skipped += 1
         else:
             try:
-                frames, layer_means = bb.extract(bb.load_audio(root / "audio" / tr.path))
+                segs = bb.load_segments(root / "audio" / tr.path)
+                outs = [bb.extract(y) for y in segs]
+                # 多段沿时间轴拼接：池化层照常工作，等价于「在更长的时间跨度上平均」
+                frames = np.concatenate([o[0] for o in outs], axis=0)
+                layer_means = np.mean([o[1].astype(np.float32) for o in outs], axis=0).astype(np.float16)
                 if need_frames:
                     fp.parent.mkdir(parents=True, exist_ok=True)
                     np.save(fp, frames)

@@ -37,6 +37,8 @@ def main() -> int:
     p.add_argument("--layer", type=int, default=7,
                    help="取基座第几层。默认 7 —— 由 scripts.probe_layers 用数据选出，不是猜的")
     p.add_argument("--frame-stride", type=int, default=5)
+    p.add_argument("--segments", type=int, default=1,
+                   help="用几段拼接的特征（要与 extract_backbone --segments 一致）")
     p.add_argument("--fusion", default="gate", choices=("concat", "gate", "sum"),
                    help="L5 的融合方式。sum 零额外参数，是「分离是否提供新信息」的最强证据")
     p.add_argument("--pooling", default="",
@@ -91,7 +93,7 @@ def main() -> int:
         desc = f"MelCNN(mel {cfg_mel.n_mels})"
     else:
         cfg_bb = BackboneConfig(name=args.backbone, layer=args.layer,
-                                frame_stride=args.frame_stride)
+                                frame_stride=args.frame_stride, n_segments=args.segments)
         # 缺特征的曲目直接剔除，而不是训练时才 FileNotFoundError
         kept, dim = {}, None
         for n in ("train", "validation", "test"):

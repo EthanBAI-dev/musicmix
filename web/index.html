@@ -32,12 +32,24 @@
     <h2>四轨混音台</h2>
     <div class="src-info">
       <span id="srcName">合成演示曲</span>
+      <label class="btn btn-accent" id="uploadLabel">
+        ⬆ 上传并分离
+        <input type="file" id="uploadInput" accept="audio/*" hidden>
+      </label>
       <label class="btn btn-ghost">
-        载入自己的音频
+        载入已分离的 stem
         <input type="file" id="fileInput" accept="audio/*" multiple hidden>
       </label>
       <button class="btn btn-ghost" id="resetDemo">恢复演示曲</button>
     </div>
+  </div>
+
+  <!-- 上传进度 -->
+  <div class="upload-bar" id="uploadBar" hidden>
+    <span class="spinner" id="upSpin"></span>
+    <span id="upName"></span>
+    <span class="dim" id="upStage"></span>
+    <button class="btn btn-ghost btn-sm" id="upDismiss" hidden>关闭</button>
   </div>
 
   <!-- 失败案例听审 -->

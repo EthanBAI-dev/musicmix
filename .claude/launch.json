@@ -4,8 +4,8 @@
     {
       "name": "web",
       "runtimeExecutable": "/opt/anaconda3/envs/music-mix/bin/python",
-      "runtimeArgs": ["-m", "http.server", "8123", "--directory", "/Users/baiwenbin/音乐理解与智能混音助手"],
-      "port": 8123
+      "runtimeArgs": ["-m", "scripts.serve"],
+      "autoPort": true
     }
   ]
 }
