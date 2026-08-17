@@ -7,7 +7,7 @@
 | 日期 | 2026-07-29 22:27 |
 | commit | `(未提交)` |
 | 硬件 | Apple M2 Max / mps |
-| 命令 | `/Users/baiwenbin/音乐理解与智能混音助手/scripts/run_separation_eval.py --synthetic 6 --synthetic-seconds 5 --model silence --out results/m0_selfcheck_silence.md` |
+| 命令 | `python -m scripts.run_separation_eval.py --synthetic 6 --synthetic-seconds 5 --model silence --out results/m0_selfcheck_silence.md` |
 | 总耗时 | 0.1s（音频总长 30s） |
 
 **指标：uSDR（均值聚合）（dB，越高越好）**

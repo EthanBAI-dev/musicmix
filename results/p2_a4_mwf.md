@@ -7,7 +7,7 @@
 | 日期 | 2026-08-01 12:23 |
 | commit | `c704fa6` |
 | 硬件 | Apple M2 Max / torch 2.13.0 |
-| 命令 | `/Users/baiwenbin/音乐理解与智能混音助手/scripts/run_separation_eval.py --model htdemucs --subset test --workers 3 --refine mwf --out results/p2_a4_mwf.md` |
+| 命令 | `python -m scripts.run_separation_eval.py --model htdemucs --subset test --workers 3 --refine mwf --out results/p2_a4_mwf.md` |
 | 分离 RTF（中位数） | 0.0938（×10.7 实时） |
 | 总耗时 | 24.2 min（音频总长 207.8 min，含 museval，3 进程） |
 

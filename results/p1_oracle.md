@@ -7,7 +7,7 @@
 | 日期 | 2026-07-30 08:09 |
 | commit | `4c65b5f` |
 | 硬件 | Apple M2 Max / torch 2.13.0 |
-| 命令 | `/Users/baiwenbin/音乐理解与智能混音助手/scripts/run_separation_eval.py --model oracle --subset test --workers 6 --out results/p1_oracle.md` |
+| 命令 | `python -m scripts.run_separation_eval.py --model oracle --subset test --workers 6 --out results/p1_oracle.md` |
 | 分离 RTF（中位数） | 0.0332（×30.2 实时） |
 | 总耗时 | 14.6 min（音频总长 207.8 min，含 museval，6 进程） |
 
