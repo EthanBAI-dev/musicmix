@@ -50,6 +50,8 @@ def main() -> int:
     p.add_argument("--split", type=int, default=0)
     p.add_argument("--root", default=str(DEFAULT_ROOT))
     p.add_argument("--clip-seconds", type=float, default=30.0)
+    p.add_argument("--segments", type=int, default=1,
+                   help="读几段拼接的缓存。>1 用来在**同一层上**对比「30 秒 vs 多段覆盖」")
     p.add_argument("--max-iter", type=int, default=400)
     p.add_argument("--out", default="results/p4_layer_probe")
     args = p.parse_args()
@@ -59,7 +61,8 @@ def main() -> int:
     from sklearn.preprocessing import StandardScaler
 
     root = Path(args.root)
-    cfg = BackboneConfig(name=args.model, clip_seconds=args.clip_seconds)
+    cfg = BackboneConfig(name=args.model, clip_seconds=args.clip_seconds,
+                         n_segments=args.segments)
     parts, vocab = load_split(args.subset, args.split, root=root, only_local=True)
 
     data = {}
