@@ -29,6 +29,7 @@ LADDER = [
     ("L2mean",   "MERT + MLP 头（mean 池化）",    "阶梯"),
     ("M330L2",   "MERT-330M + MLP 头",            "阶梯"),
     ("SEGall4",  "MERT-95M + 全曲 4 段 ★",        "阶梯"),
+    ("M330SEG4", "MERT-330M + 全曲 4 段",         "阶梯"),
 ]
 
 # (基线, 处理, 说明, 这是不是"我自己设计的点")
@@ -41,6 +42,10 @@ COMPARISONS = [
     ("L2mean",  "M330L2",   "换 330M 基座",                  False),
     ("SEGs2",   "SEGall4",  "全曲 4 段 vs 单段 30 秒 ★",     True),
     ("M330L2",  "SEGall4",  "4 段 95M vs 330M（参数少 3.35×）", False),
+    ("SEGall4",  "SEGall8",  "8 段 vs 4 段（饱和点）★",        True),
+    ("SEGall4",  "M330SEG4", "有 4 段后再换 330M",             False),
+    ("SEGall4",  "A4attn",   "注意力池化（在 4 段输入上复检）", True),
+    ("SEGall4",  "A4linear", "换回线性探针（在 4 段输入上）",   True),
 ]
 
 

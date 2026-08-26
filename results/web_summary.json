@@ -1,6 +1,6 @@
 {
   "generated_by": "python -m scripts.build_web_summary",
-  "n_tests": 166,
+  "n_tests": 190,
   "ladder": [
     {
       "key": "L0",
@@ -74,6 +74,21 @@
       "f1": {
         "mean": 0.29846237247495333,
         "std": 0.00490909160070706,
+        "n": 5
+      }
+    },
+    {
+      "key": "M330SEG4",
+      "label": "MERT-330M + 全曲 4 段",
+      "group": "阶梯",
+      "map": {
+        "mean": 0.2864931304513624,
+        "std": 0.0025809795796401087,
+        "n": 5
+      },
+      "f1": {
+        "mean": 0.2959247922366675,
+        "std": 0.0018995447412423609,
         "n": 5
       }
     }
@@ -150,9 +165,45 @@
       "wins": 5,
       "n": 5,
       "verdict": "confirmed"
+    },
+    {
+      "label": "8 段 vs 4 段（饱和点）★",
+      "mine": true,
+      "delta": -0.002106171729425488,
+      "std": 0.0043721100254581905,
+      "wins": 1,
+      "n": 5,
+      "verdict": "noise"
+    },
+    {
+      "label": "有 4 段后再换 330M",
+      "mine": false,
+      "delta": -0.001361237557510453,
+      "std": 0.0029211953823567102,
+      "wins": 2,
+      "n": 5,
+      "verdict": "noise"
+    },
+    {
+      "label": "注意力池化（在 4 段输入上复检）",
+      "mine": true,
+      "delta": -0.004327284620334104,
+      "std": 0.005982382583380674,
+      "wins": 1,
+      "n": 5,
+      "verdict": "noise"
+    },
+    {
+      "label": "换回线性探针（在 4 段输入上）",
+      "mine": true,
+      "delta": -0.028895149921057572,
+      "std": 0.0031124300731036783,
+      "wins": 0,
+      "n": 5,
+      "verdict": "refuted"
     }
   ],
-  "n_refuted": 2,
-  "n_noise": 3,
+  "n_refuted": 3,
+  "n_noise": 5,
   "n_confirmed": 1
 }
