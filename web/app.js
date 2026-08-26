@@ -805,7 +805,11 @@ async function loadCase(id) {
       t.panner.pan.value = t.pan;
     }
 
-    S.analysis = null;                    // 真实曲目还没有分析结果，等 P3
+    // 分析结果（BPM/调性/和弦/曲式）。**分析可能缺失或失败** ——
+    // 缺了就置 null，让面板显示「无数据」，绝不沿用上一首的分析。
+    S.analysis = c.analysis
+      ? await fetch(`../${c.analysis}`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      : null;
     S.srcLabel = c.csdr_mean == null
       ? `我的曲目：${c.track}（${c.model || 'htdemucs'} 分离）`
       : `${c.tag === 'worst' ? '失败案例' : '对照'}：${c.track}（cSDR ${c.csdr_mean} dB）`;

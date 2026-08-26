@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 import traceback
@@ -39,6 +40,9 @@ class Job:
     status: str = "queued"          # queued / running / done / error
     stage: str = "排队中"
     error: str = ""
+    # 部分失败：分离成功但分析失败时用这个。与 error 分开 ——
+    # 把它写进 error 会让前端把一个可用的结果显示成失败
+    warning: str = ""
     track_id: str = ""
     duration: float = 0.0
     elapsed: float = 0.0
@@ -47,7 +51,8 @@ class Job:
     def as_dict(self) -> dict:
         return {
             "id": self.id, "filename": self.filename, "status": self.status,
-            "stage": self.stage, "error": self.error, "track_id": self.track_id,
+            "stage": self.stage, "error": self.error, "warning": self.warning,
+            "track_id": self.track_id,
             "duration": round(self.duration, 1), "elapsed": round(self.elapsed, 1),
         }
 
@@ -135,6 +140,32 @@ def _run(job: Job, raw: bytes, filename: str, model: str, seconds: float) -> Non
                     files[name] = f"mine/{slug}/{name}.mp3"
             tmp_wav.unlink(missing_ok=True)
 
+            # 音乐分析（BPM / 调性 / 和弦 / 曲式）。放在分离**之后**跑，
+            # 因为它比分离快得多（233 秒的歌约 6 秒），先出 stem 能让页面早点可用。
+            # 分析失败不该让整个任务失败 —— 分离结果本身仍然有价值。
+            analysis = None
+            try:
+                job.stage = "分析节拍与和弦"
+                from src.analysis.pipeline import ANALYSIS_SR, analyze_audio
+                import librosa
+                # load_audio 返回 **(样本, 声道)**，所以并轨要 axis=1。
+                # 写成 axis=0 会把**时间轴**平均掉，得到一个 2 元素数组 ——
+                # 而分析在 2 个样本上照跑不误，产出 BPM 0.0、和弦为空，**不抛任何异常**。
+                # 这是实际发生过的静默失败，下面的断言就是为它加的。
+                mono = mix.mean(axis=1) if mix.ndim == 2 else mix
+                mono = librosa.resample(mono, orig_sr=sr, target_sr=ANALYSIS_SR)
+                got = len(mono) / ANALYSIS_SR
+                if abs(got - job.duration) > max(1.0, job.duration * 0.02):
+                    # 并轨/重采样出错时长度会离谱地对不上。宁可在这里炸掉，
+                    # 也不要产出一份"看起来像分析结果"的垃圾
+                    raise ValueError(
+                        f"并轨后时长 {got:.2f}s 与音频 {job.duration:.2f}s 不符，疑似轴用错")
+                analysis = analyze_audio(mono, ANALYSIS_SR, source=Path(filename).stem)
+                (out / "analysis.json").write_text(
+                    json.dumps(analysis, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception as e:                      # noqa: BLE001
+                job.warning = f"分析失败（分离结果不受影响）：{type(e).__name__}: {e}"
+
             rms = {k: float(np.sqrt(np.mean(v**2))) for k, v in stems.items()}
             update_manifest({
                 "id": slug,
@@ -144,6 +175,10 @@ def _run(job: Job, raw: bytes, filename: str, model: str, seconds: float) -> Non
                 "duration": round(job.duration, 1),
                 "model": sep.name,
                 "stem_rms_db": {k: round(20 * np.log10(v + 1e-12), 1) for k, v in rms.items()},
+                # 分析是**估计值**，不是真值 —— 前端据此显示「模型估计」
+                "analysis": f"mine/{slug}/analysis.json" if analysis else None,
+                "bpm": analysis["bpm"] if analysis else None,
+                "key": analysis["key"] if analysis else None,
                 "files": files,
             })
             job.track_id = slug
