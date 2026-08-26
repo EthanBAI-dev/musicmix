@@ -21,6 +21,7 @@
     <span class="pill pill-ok">M0 评测框架 ✅</span>
     <span class="pill pill-ok">M1 分离 8.80 dB ✅</span>
     <span class="pill pill-ok">M2 混音台 ✅</span>
+    <span class="pill pill-ok">M5 标签 mAP 0.2879 ✅</span>
   </div>
 </header>
 
@@ -125,6 +126,46 @@
   <p class="note" id="analysisNote"></p>
 </section>
 
+<!-- ==================== 标签任务 ==================== -->
+<section class="panel">
+  <div class="panel-head">
+    <h2>自动标签：阶梯与消融</h2>
+    <span class="tag" id="tagSrc">MTG-Jamendo top50tags · split-0</span>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>性能阶梯</h3>
+      <p class="card-sub">测试集 mAP，5 个随机种子的 mean ± std</p>
+      <table class="mini" id="ladderTable">
+        <thead><tr><th>配置</th><th>mAP</th><th>MacroF1</th></tr></thead>
+        <tbody><tr><td colspan="3" class="dim">加载中…</td></tr></tbody>
+      </table>
+      <p class="card-foot">最好的配置是 <b>95M 基座 + 全曲 4 段</b>，
+        它<b>没有增加任何参数</b>，只是换了「看这首歌的哪 30 秒」。</p>
+    </div>
+
+    <div class="card">
+      <h3>每一项改动的判决</h3>
+      <p class="card-sub">同种子配对比较，看 5 次的方向是否一致</p>
+      <ul class="verdicts" id="verdictList"><li class="dim">加载中…</li></ul>
+      <p class="card-foot" id="verdictSummary"></p>
+    </div>
+
+    <div class="card">
+      <h3>为什么要报负结果</h3>
+      <p class="card-sub">这一栏是刻意保留的</p>
+      <ul class="ticks">
+        <li>单次运行里注意力池化「赢」了 <b>0.004</b>，而种子间标准差就有 <b>0.009</b></li>
+        <li>只跑一次会把<b>噪声包装成自研成果</b></li>
+        <li>所以判据是<b>方向一致性 k/n</b>，不是均值差</li>
+        <li>ASL 在默认阈值下最好、调完阈值后最差 —— 它修的是概率标定，
+            而<b>逐标签阈值优化把同一件事做得更彻底且免费</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
 <!-- ==================== 项目状态 ==================== -->
 <section class="panel">
   <div class="panel-head">
@@ -145,7 +186,7 @@
 
     <div class="card">
       <h3>单元测试</h3>
-      <div class="big-num"><b id="testCount">111</b><span>passed</span></div>
+      <div class="big-num"><b id="testCount">—</b><span>passed</span></div>
       <ul class="ticks">
         <li>全零估计 → uSDR 恰为 <b>0.00 dB</b></li>
         <li>构造 SNR=7dB 误差 → SDR 恰为 <b>7.00 dB</b></li>

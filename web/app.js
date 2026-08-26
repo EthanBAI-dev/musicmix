@@ -953,16 +953,67 @@ async function loadDashboard() {
     : `<tr><td colspan="3" class="dim">需通过 HTTP 访问才能读取 results/（用 python -m http.server）</td></tr>`;
 }
 
+/** 标签任务面板：读 results/web_summary.json（由 scripts.build_web_summary 生成）。
+ *  前端不能 glob results/seeds/*.json，所以必须走这个汇总文件。 */
+async function loadTagging() {
+  const tbody = $('ladderTable').querySelector('tbody');
+  const list = $('verdictList');
+  let d;
+  try {
+    const r = await fetch('../results/web_summary.json');
+    if (!r.ok) throw new Error(r.status);
+    d = await r.json();
+  } catch (_) {
+    const msg = '需通过 HTTP 访问（python -m scripts.serve）';
+    tbody.innerHTML = `<tr><td colspan="3" class="dim">${msg}</td></tr>`;
+    list.innerHTML = `<li class="dim">${msg}</li>`;
+    return;
+  }
+
+  if (typeof d.n_tests === 'number' && d.n_tests > 0) $('testCount').textContent = d.n_tests;
+
+  const best = Math.max(...d.ladder.map((r) => r.map.mean));
+  tbody.innerHTML = d.ladder.map((r) => {
+    // n=1 的行必须标出来 —— 没有种子方差的数字不能和 5 种子的并排读
+    const note = r.map.n > 1 ? `±${r.map.std.toFixed(4)}` : ' <i class="dim">(单次)</i>';
+    const hi = r.map.mean === best ? ' class="best"' : '';
+    return `<tr${hi}><td>${r.label}</td>
+              <td><b>${r.map.mean.toFixed(4)}</b><span class="dim">${note}</span></td>
+              <td class="dim">${r.f1 ? r.f1.mean.toFixed(4) : '—'}</td></tr>`;
+  }).join('');
+
+  const MARK = {
+    confirmed: ['✅', 'ok', '成立'],
+    refuted: ['❌', 'bad', '证伪'],
+    noise: ['⚠️', 'warn', '噪声'],
+  };
+  list.innerHTML = d.comparisons.map((c) => {
+    const [icon, cls, word] = MARK[c.verdict];
+    const mine = c.mine ? '<i class="mine" title="我自己设计的改动">自研</i>' : '';
+    return `<li class="v-${cls}"><span class="vi">${icon}</span>
+              <span class="vt">${c.label}${mine}</span>
+              <span class="vd">${c.delta >= 0 ? '+' : ''}${c.delta.toFixed(4)}</span>
+              <span class="vk">${c.wins}/${c.n} ${word}</span></li>`;
+  }).join('');
+
+  const { n_confirmed: ok, n_refuted: bad, n_noise: noise } = d;
+  $('verdictSummary').innerHTML =
+    `我自己设计的改动一共 ${ok + bad + noise} 项：<b>${ok} 项成立</b>、` +
+    `${bad} 项被证伪、${noise} 项与基线不可区分。` +
+    `负结果照样写在这里 —— 一个只列成功项的页面等于没说实话。`;
+}
+
 const MILESTONES = [
   ['M0', '工程地基 · 评测框架', 'done'],
   ['M1', '分离 baseline · htdemucs 8.80 dB', 'done'],
   ['M2', '前端最小可用 · 四轨混音台', 'done'],
-  ['M3', '标签 L0→L4', ''],
-  ['M4', '分离改进 A+B · 消融表', 'active'],
-  ['M5', 'Stem-aware Tagging ★', ''],
-  ['M6', '音乐分析 + 自动 Mashup', ''],
+  ['M3', '标签 L0→L4 · 三个自研点证伪', 'done'],
+  ['M4', '分离改进 A · TTA +0.095 dB', 'done'],
+  ['M5', '标签进阶 · 窗口选择 mAP 0.2879', 'done'],
+  ['M6', '音乐分析 + 自动 Mashup', 'active'],
   ['M7', '检索 + 服务化', ''],
   ['M8', '蒸馏 + 作品集包装', ''],
+  ['M9', '公开部署', ''],
 ];
 
 function renderRoadmap() {
@@ -1115,6 +1166,7 @@ function bindGlobal() {
 bindGlobal();
 renderRoadmap();
 loadDashboard();
+loadTagging();
 loadCaseManifest();
 loadDemo();
 requestAnimationFrame(tick);

@@ -7,6 +7,9 @@
   --dim: #8b96a8;
   --accent: #4cc9f0;
   --ok: #52d99a;
+  --bad: #e5646d;      /* 与 .why-real 同色：页面上「真实失败」一律用这个红 */
+  --warn: #d9a441;     /* 与 .why-artifact 同色：「指标假象/不可区分」用这个黄 */
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
   --vocals: #f4a261;
   --drums: #e76f51;
@@ -324,4 +327,57 @@ footer p { margin: 0; }
   .meta { margin-left: 0; width: 100%; justify-content: space-between; }
   .master { width: 100%; }
   .master input { flex: 1; }
+}
+
+
+/* ---------- 标签面板：阶梯表 + 判决列表 ---------- */
+
+/* 最佳行高亮。用左边框而不是整行底色 —— 底色会和 .mini 的斑马纹打架 */
+.mini tr.best td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.mini tr.best td:first-child { border-left: 3px solid var(--accent); font-weight: 600; }
+
+.verdicts { list-style: none; margin: 0; padding: 0; }
+.verdicts li {
+  display: grid;
+  grid-template-columns: 1.4em 1fr auto auto;
+  gap: .5em;
+  align-items: baseline;
+  padding: .38em 0;
+  border-bottom: 1px solid var(--line);
+  font-size: .92em;
+}
+.verdicts li:last-child { border-bottom: 0; }
+.verdicts .vi { font-size: .95em; }
+.verdicts .vt { min-width: 0; }
+/* 数值用等宽，正负号对齐才能一眼扫出方向。
+   min-width 是必须的：每个 li 是**独立的 grid**，列宽各算各的，
+   不定宽的话只要有一行数字位数不同，整列就会参差。 */
+.verdicts .vd {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+  min-width: 5.4em;
+  text-align: right;
+}
+.verdicts .vk {
+  font-size: .85em;
+  color: var(--dim);
+  white-space: nowrap;
+  min-width: 4.8em;
+  text-align: right;
+}
+
+.verdicts .v-ok   .vd { color: var(--ok); }
+.verdicts .v-bad  .vd { color: var(--bad); }
+.verdicts .v-warn .vd { color: var(--dim); }
+
+/* 「自研」角标：标出哪些是我自己设计的改动，而不是换个现成模型 */
+.verdicts .mine {
+  font-style: normal;
+  font-size: .72em;
+  margin-left: .5em;
+  padding: .1em .4em;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--dim);
+  vertical-align: .12em;
 }
