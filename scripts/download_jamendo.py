@@ -228,7 +228,11 @@ def expected_per_chunk(root: Path) -> dict[int, int]:
 def main() -> int:
     p = argparse.ArgumentParser(description="按需下载 MTG-Jamendo 音频分块")
     p.add_argument("--chunks", type=int, default=20,
-                   help="下载前 N 块（每块约 556 首）。分块 = 曲目 id 末两位，取前 N 块即随机样本")
+                   help="下载到第 N 块为止（每块约 556 首）。分块 = 曲目 id 末两位，取前 N 块即随机样本")
+    p.add_argument("--start", type=int, default=0,
+                   help="从第几块开始（默认 0）。配合 --chunks 取区间 [start, chunks)。"
+                        "用于 Colab 那种「下一块→提特征→删音频」的流式处理："
+                        "全量音频 490 GB，塞不进 Colab 本地盘，必须分批")
     p.add_argument("--type", default="audio", choices=("audio", "audio-low", "melspecs"),
                    help="audio=320k 立体声；audio-low=100k **单声道**（不适合做分离）")
     p.add_argument("--mirror", default="mtg-fast", choices=tuple(MIRRORS))
@@ -251,12 +255,17 @@ def main() -> int:
     dest = root / args.type
     dest.mkdir(parents=True, exist_ok=True)
     expected_counts = expected_per_chunk(root)
-    todo = [i for i in range(args.chunks)
+    if not 0 <= args.start < args.chunks:
+        print(f"❌ 区间非法：--start {args.start} 必须在 [0, --chunks {args.chunks}) 内",
+              file=sys.stderr)
+        return 1
+    todo = [i for i in range(args.start, args.chunks)
             if not chunk_done(dest, i, expected_counts.get(i))]
-    done = args.chunks - len(todo)
+    done = (args.chunks - args.start) - len(todo)
 
     est = len(todo) * CHUNK_GB[args.type]
-    print(f"\n{args.type}：共 {args.chunks} 块，已有 {done} 块，待下 {len(todo)} 块（约 {est:.0f} GB）")
+    print(f"\n{args.type}：区间 [{args.start}, {args.chunks}) 共 {args.chunks - args.start} 块，"
+          f"已有 {done} 块，待下 {len(todo)} 块（约 {est:.0f} GB）")
     free = shutil.disk_usage(root.parent if root.exists() else ".").free / 2**30
     print(f"磁盘可用 {free:.0f} GB")
     if free < est * 1.15:
