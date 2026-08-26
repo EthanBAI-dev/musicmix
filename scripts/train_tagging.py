@@ -51,6 +51,9 @@ def main() -> int:
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--loss", default="bce", choices=("bce", "focal", "asl"))
     p.add_argument("--crop-frames", type=int, default=512)
+    p.add_argument("--use-segments", default="",
+                   help="多段缓存里只用哪几段，逗号分隔（如 2 或 0,2）。空=全用。"
+                        "用来在**同一批缓存**上做段落消融")
     p.add_argument("--patience", type=int, default=6)
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--device", default="auto")
@@ -58,6 +61,8 @@ def main() -> int:
     p.add_argument("--out", default="")
     args = p.parse_args()
 
+    use_segs = (tuple(int(v) for v in args.use_segments.split(","))
+                if args.use_segments.strip() else None)
     root = Path(args.root)
     cfg_mel = MelConfig()
     parts, vocab = load_split(args.subset, args.split, root=root, only_local=True)
@@ -109,6 +114,8 @@ def main() -> int:
             dim = dim or int(np.load(paths[0]).shape[-1])
             y = vocab.encode([parts[n][i] for i in keep])
             kept[n] = wrap(FeatureDataset(paths, y, crop_frames=None,
+                                          n_segments=args.segments,
+                                          use_segments=use_segs,
                                           train=(n == "train")), n == "train")
             if len(paths) < len(parts[n]):
                 print(f"  ⚠️  {n}: {len(parts[n]) - len(paths)} 首缺特征，已剔除")

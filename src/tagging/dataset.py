@@ -81,13 +81,30 @@ class FeatureDataset(Dataset):
     """
 
     def __init__(self, feature_paths: list[Path], labels: np.ndarray,
-                 crop_frames: int | None = None, train: bool = True):
+                 crop_frames: int | None = None, train: bool = True,
+                 n_segments: int = 1, use_segments: tuple[int, ...] | None = None):
+        """
+        Args:
+            n_segments: 缓存里拼了几段。多段缓存是沿**时间轴**拼接的。
+            use_segments: 只用其中哪几段。``None`` 表示全用。
+                这是 P5 段落消融的入口：同一批缓存切出「只看 2/3 处」与
+                「全曲 4 段」，基座/层/曲目/划分严格相同，
+                **段数是唯一的自变量**。
+        """
         if len(feature_paths) != len(labels):
             raise ValueError("特征数与标签数不一致")
+        if use_segments is not None:
+            if n_segments <= 1:
+                raise ValueError("use_segments 需要 n_segments > 1")
+            bad = [i for i in use_segments if not 0 <= i < n_segments]
+            if bad:
+                raise ValueError(f"段索引越界：{bad}，缓存只有 {n_segments} 段")
         self.paths = feature_paths
         self.labels = labels.astype(np.float32)
         self.crop = crop_frames
         self.train = train
+        self.n_segments = n_segments
+        self.use_segments = tuple(use_segments) if use_segments else None
         self._rng = np.random.default_rng(0)
 
     def __len__(self) -> int:
@@ -95,6 +112,14 @@ class FeatureDataset(Dataset):
 
     def __getitem__(self, i: int):
         x = np.load(self.paths[i]).astype(np.float32)      # (T, D)
+        if self.use_segments is not None:
+            if x.shape[0] % self.n_segments:
+                # 整除失败说明缓存不是这个段数提的 —— 静默切下去会把时间轴切错位，
+                # 模型照样能训，只是永远学不好。宁可在这里炸掉。
+                raise ValueError(
+                    f"{self.paths[i].name}: {x.shape[0]} 帧无法整除 {self.n_segments} 段")
+            x = x.reshape(self.n_segments, -1, x.shape[1])[list(self.use_segments)]
+            x = x.reshape(-1, x.shape[-1])
         if self.crop is not None and x.shape[0] > self.crop:
             s = (int(self._rng.integers(0, x.shape[0] - self.crop + 1))
                  if self.train else (x.shape[0] - self.crop) // 2)
