@@ -1,0 +1,22 @@
+{
+  "model": "silence",
+  "source": "合成数据 ×6（每首 5.0s）",
+  "median": {
+    "uSDR": {
+      "vocals": 0.0,
+      "drums": 0.0,
+      "bass": 0.0,
+      "other": 0.0,
+      "mean": 0.0
+    }
+  },
+  "mean": {
+    "uSDR": {
+      "vocals": 0.0,
+      "drums": 0.0,
+      "bass": 0.0,
+      "other": 0.0,
+      "mean": 0.0
+    }
+  }
+}

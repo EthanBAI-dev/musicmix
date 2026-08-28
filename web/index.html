@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>音乐理解与智能混音助手</title>
+<!-- ?v= 只为一次性冲掉浏览器里的旧缓存；日常开发请用 python -m scripts.serve，它对所有响应发 no-store -->
+<link rel="stylesheet" href="styles.css?v=2">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">♪</span>
+    <div>
+      <h1>音乐理解与智能混音助手</h1>
+      <p class="sub">音源分离 · 音乐分析 · 自动标签 · 相似检索 · 浏览器混音</p>
+    </div>
+  </div>
+  <div class="badges">
+    <span class="pill pill-ok">M0 评测框架 ✅</span>
+    <span class="pill pill-ok">M1 分离 8.80 dB ✅</span>
+    <span class="pill pill-ok">M2 混音台 ✅</span>
+    <span class="pill pill-ok">M5 标签 mAP 0.2879 ✅</span>
+  </div>
+</header>
+
+<main>
+
+<!-- ==================== 混音台 ==================== -->
+<section class="panel">
+  <div class="panel-head">
+    <h2>四轨混音台</h2>
+    <div class="src-info">
+      <span id="srcName">合成演示曲</span>
+      <label class="btn btn-accent" id="uploadLabel">
+        ⬆ 上传并分离
+        <input type="file" id="uploadInput" accept="audio/*" hidden>
+      </label>
+      <label class="btn btn-ghost">
+        载入已分离的 stem
+        <input type="file" id="fileInput" accept="audio/*" multiple hidden>
+      </label>
+      <button class="btn btn-ghost" id="resetDemo">恢复演示曲</button>
+    </div>
+  </div>
+
+  <!-- 上传进度 -->
+  <div class="upload-bar" id="uploadBar" hidden>
+    <span class="spinner" id="upSpin"></span>
+    <span id="upName"></span>
+    <span class="dim" id="upStage"></span>
+    <button class="btn btn-ghost btn-sm" id="upDismiss" hidden>关闭</button>
+  </div>
+
+  <!-- 失败案例听审 -->
+  <div class="cases-bar" id="casesBar" hidden>
+    <label for="caseSelect">P1 失败案例听审</label>
+    <select id="caseSelect"></select>
+    <div class="ab" id="abToggle">
+      <button class="ab-btn" data-src="est" aria-pressed="true">分离结果</button>
+      <button class="ab-btn" data-src="truth" aria-pressed="false">真值</button>
+    </div>
+    <span class="dim" id="caseHint">切换时保持播放位置不变，耳朵能直接对上差别</span>
+  </div>
+  <div class="case-diag" id="caseDiag" hidden></div>
+
+  <div id="loadState" class="loading">正在解码音频…</div>
+
+  <div id="mixer" hidden>
+
+    <!-- 走带控制 -->
+    <div class="transport">
+      <button class="btn btn-play" id="playBtn" aria-label="播放/暂停">
+        <span id="playIcon">▶</span>
+      </button>
+      <button class="btn btn-ghost" id="stopBtn">■</button>
+      <button class="btn btn-ghost" id="loopBtn" aria-pressed="false">↻ 循环</button>
+
+      <div class="time"><span id="curTime">0:00.0</span> <span class="dim">/ <span id="durTime">0:00.0</span></span></div>
+
+      <div class="meta">
+        <span class="kv"><b id="bpmVal">–</b><i>BPM</i></span>
+        <span class="kv"><b id="keyVal">–</b><i>调性</i></span>
+        <span class="kv"><b id="sigVal">–</b><i>拍号</i></span>
+        <span class="kv"><b id="barVal">–</b><i>小节</i></span>
+      </div>
+
+      <div class="master">
+        <label for="masterVol">主音量</label>
+        <input type="range" id="masterVol" min="0" max="1.5" step="0.01" value="1">
+        <span class="val" id="masterVolVal">100%</span>
+      </div>
+
+      <button class="btn btn-accent" id="exportBtn">导出 WAV</button>
+    </div>
+
+    <!-- 时间轴：段落 / 和弦 / 小节线 -->
+    <div class="timeline-wrap">
+      <canvas id="timeline" height="76"></canvas>
+      <div class="timeline-legend">
+        <span><i class="sw sw-intro"></i>intro</span>
+        <span><i class="sw sw-verse"></i>verse</span>
+        <span><i class="sw sw-chorus"></i>chorus</span>
+        <span class="dim">粗线 = 小节线（downbeat）· 细线 = 拍点 · 点击定位</span>
+      </div>
+    </div>
+
+    <!-- 四条音轨 -->
+    <div class="tracks" id="tracks"></div>
+
+    <!-- 频谱 -->
+    <div class="spectrum-wrap">
+      <canvas id="spectrum" height="120"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 分析结果 ==================== -->
+<section class="panel">
+  <div class="panel-head">
+    <h2>分析结果</h2>
+    <span class="tag" id="analysisSrc">—</span>
+  </div>
+  <div class="analysis-grid" id="analysisGrid"></div>
+  <p class="note" id="analysisNote"></p>
+</section>
+
+<!-- ==================== 标签任务 ==================== -->
+<section class="panel">
+  <div class="panel-head">
+    <h2>自动标签：阶梯与消融</h2>
+    <span class="tag" id="tagSrc">MTG-Jamendo top50tags · split-0</span>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>性能阶梯</h3>
+      <p class="card-sub">测试集 mAP，5 个随机种子的 mean ± std</p>
+      <table class="mini" id="ladderTable">
+        <thead><tr><th>配置</th><th>mAP</th><th>MacroF1</th></tr></thead>
+        <tbody><tr><td colspan="3" class="dim">加载中…</td></tr></tbody>
+      </table>
+      <p class="card-foot">最好的配置是 <b>95M 基座 + 全曲 4 段</b>，
+        它<b>没有增加任何参数</b>，只是换了「看这首歌的哪 30 秒」。</p>
+    </div>
+
+    <div class="card">
+      <h3>每一项改动的判决</h3>
+      <p class="card-sub">同种子配对比较，看 5 次的方向是否一致</p>
+      <ul class="verdicts" id="verdictList"><li class="dim">加载中…</li></ul>
+      <p class="card-foot" id="verdictSummary"></p>
+    </div>
+
+    <div class="card">
+      <h3>为什么要报负结果</h3>
+      <p class="card-sub">这一栏是刻意保留的</p>
+      <ul class="ticks">
+        <li>单次运行里注意力池化「赢」了 <b>0.004</b>，而种子间标准差就有 <b>0.009</b></li>
+        <li>只跑一次会把<b>噪声包装成自研成果</b></li>
+        <li>所以判据是<b>方向一致性 k/n</b>，不是均值差</li>
+        <li>ASL 在默认阈值下最好、调完阈值后最差 —— 它修的是概率标定，
+            而<b>逐标签阈值优化把同一件事做得更彻底且免费</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 项目状态 ==================== -->
+<section class="panel">
+  <div class="panel-head">
+    <h2>项目状态</h2>
+    <span class="tag">M1 · MUSDB18-HQ test 50 首 · 2026-07-30</span>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>评测框架锚点</h3>
+      <p class="card-sub">MUSDB18-HQ test 全 50 首，cSDR 平均（museval 中位数聚合）</p>
+      <table class="mini" id="anchorTable">
+        <thead><tr><th>模型</th><th>SDR 平均</th><th>作用</th></tr></thead>
+        <tbody><tr><td colspan="3" class="dim">加载中…</td></tr></tbody>
+      </table>
+      <p class="card-foot">IRM oracle 只是<b>掩码类方法</b>的上界。Demucs 直接生成波形能修正相位，实测在 drums/bass 上已与它统计上不可区分（配对 bootstrap p=0.88 / 0.18）。</p>
+    </div>
+
+    <div class="card">
+      <h3>单元测试</h3>
+      <div class="big-num"><b id="testCount">—</b><span>passed</span></div>
+      <ul class="ticks">
+        <li>全零估计 → uSDR 恰为 <b>0.00 dB</b></li>
+        <li>构造 SNR=7dB 误差 → SDR 恰为 <b>7.00 dB</b></li>
+        <li>调阈值 → Macro-F1 <b>0.50→1.00</b>，mAP 恒为 1.00</li>
+        <li>+0.15 dB 的微小提升能被配对检验检出</li>
+        <li>IRM 必须优于 IBM，IBM 必须是硬划分</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>里程碑</h3>
+      <ul class="roadmap" id="roadmap"></ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>数据与许可：MUSDB18-HQ 与 MTG-Jamendo 均限非商业研究/学术使用。本页演示音频为脚本合成，非真实唱片。</p>
+</footer>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="app.js?v=2"></script>
+</body>
+</html>

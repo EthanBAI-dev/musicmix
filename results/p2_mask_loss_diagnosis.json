@@ -1,0 +1,42 @@
+{
+  "n_tracks": 10,
+  "tracks": [
+    "AM Contra - Heart Peripheral",
+    "BKS - Too Much",
+    "Cristina Vane - So Easy",
+    "Girls Under Glass - We Feel Alright",
+    "Louis Cressy Band - Good Time",
+    "Mu - Too Bright",
+    "Raft Monk - Tiring",
+    "Signe Jakobsen - What Have You Done To Me",
+    "The Easton Ellises (Baumi) - SDRNR",
+    "Timboz - Pony"
+  ],
+  "means_usdr": {
+    "base": {
+      "vocals": 9.024307659132285,
+      "drums": 9.717715162611729,
+      "bass": 6.337480493691492,
+      "other": 6.040826904102991,
+      "mean": 7.7800825548846255
+    },
+    "自幅度+混音相位": {
+      "vocals": 8.621785535784086,
+      "drums": 8.095864186499442,
+      "bass": 4.426317142209976,
+      "other": 5.6186766804457635,
+      "mean": 6.690660886234817
+    },
+    "软掩码": {
+      "vocals": 8.405938738581499,
+      "drums": 8.11990030499896,
+      "bass": 4.79858675437194,
+      "other": 5.509176495845914,
+      "mean": 6.708400573449579
+    }
+  },
+  "delta_phase_only": -1.0894216686498082,
+  "delta_magnitude_step": 0.01773968721476127,
+  "delta_total": -1.071681981435047,
+  "phase_share_pct": 101.6553126321119
+}

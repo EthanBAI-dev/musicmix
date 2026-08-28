@@ -1,0 +1,275 @@
+{
+  "level": "L2",
+  "config": {
+    "level": "L2",
+    "epochs": 30,
+    "batch_size": 32,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "loss": "focal",
+    "pooling": "mean",
+    "patience": 6,
+    "device": "auto",
+    "seed": 3,
+    "crop_frames": 512,
+    "num_workers": 4
+  },
+  "n_params": 420914,
+  "best_epoch": 10,
+  "train_seconds": 46.961423708009534,
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.059541087179463735,
+      "val_map": 0.22538635904529586,
+      "val_macro_f1": 0.05005790464432927,
+      "seconds": 8.438217457965948
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.04881548106062169,
+      "val_map": 0.2483189541244913,
+      "val_macro_f1": 0.08810041877908689,
+      "seconds": 2.4495042499620467
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.04613729281236931,
+      "val_map": 0.25845570554575686,
+      "val_macro_f1": 0.11729073248555859,
+      "seconds": 2.531767165986821
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.044686088984718125,
+      "val_map": 0.2588092970567887,
+      "val_macro_f1": 0.11429609561110082,
+      "seconds": 2.535842999932356
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.04355558772020194,
+      "val_map": 0.2610516105269454,
+      "val_macro_f1": 0.09852111264498181,
+      "seconds": 2.5175395420519635
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.04231105414124168,
+      "val_map": 0.26289092869865316,
+      "val_macro_f1": 0.11928657921528156,
+      "seconds": 2.578807833022438
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.04127502422399667,
+      "val_map": 0.2646126010466685,
+      "val_macro_f1": 0.09975454321573206,
+      "seconds": 2.527111917035654
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.04056850824581117,
+      "val_map": 0.2594620957690241,
+      "val_macro_f1": 0.1509088235353286,
+      "seconds": 2.572746083023958
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.039607652405999144,
+      "val_map": 0.2602662204768214,
+      "val_macro_f1": 0.13570775129755766,
+      "seconds": 2.61948879098054
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.03864507730670121,
+      "val_map": 0.2657965338610098,
+      "val_macro_f1": 0.12952571631167056,
+      "seconds": 2.5458037089556456
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.03757110511770054,
+      "val_map": 0.2620573721626305,
+      "val_macro_f1": 0.13881095695050438,
+      "seconds": 2.570999625022523
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.03673230786332671,
+      "val_map": 0.26341322461240535,
+      "val_macro_f1": 0.15367303351440295,
+      "seconds": 2.536321416962892
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.03564310712473733,
+      "val_map": 0.2601027337132342,
+      "val_macro_f1": 0.14587391505457456,
+      "seconds": 2.6356723330682144
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.0347891878336668,
+      "val_map": 0.26155153222344013,
+      "val_macro_f1": 0.15856567222044118,
+      "seconds": 2.5581480000400916
+    },
+    {
+      "epoch": 15,
+      "train_loss": 0.03405223948386859,
+      "val_map": 0.25981079822160924,
+      "val_macro_f1": 0.16263153688523047,
+      "seconds": 2.582873124978505
+    },
+    {
+      "epoch": 16,
+      "train_loss": 0.032947806736492384,
+      "val_map": 0.25538025349469273,
+      "val_macro_f1": 0.1439578954298963,
+      "seconds": 2.7332425840431824
+    }
+  ],
+  "val": {
+    "roc_auc": 0.7870629842745528,
+    "map": 0.2657965338610098,
+    "macro_f1_default": 0.12952571631167056,
+    "macro_f1_tuned": 0.3237591670026324,
+    "micro_f1_default": 0.26808594520007883,
+    "micro_f1_tuned": 0.3306662563471303,
+    "n_tags": 50,
+    "n_valid_tags": 50,
+    "groups": {
+      "genre": {
+        "roc_auc": 0.8446928780182309,
+        "map": 0.33229065957815673,
+        "macro_f1_default": 0.17811840972606008,
+        "macro_f1_tuned": 0.38703288027126265,
+        "micro_f1_default": 0.3468786808009423,
+        "micro_f1_tuned": 0.43371118777723017,
+        "n_tags": 31,
+        "n_valid_tags": 31
+      },
+      "instrument": {
+        "roc_auc": 0.7057500134747582,
+        "map": 0.18673195219018282,
+        "macro_f1_default": 0.055265771795184084,
+        "macro_f1_tuned": 0.2549742992269086,
+        "micro_f1_default": 0.11556139198949442,
+        "micro_f1_tuned": 0.2558780606453705,
+        "n_tags": 14,
+        "n_valid_tags": 14
+      },
+      "mood/theme": {
+        "roc_auc": 0.6574339613031732,
+        "map": 0.07491378309301411,
+        "macro_f1_default": 0.036178861788617886,
+        "macro_f1_tuned": 0.12405977450915215,
+        "micro_f1_default": 0.03896103896103896,
+        "micro_f1_tuned": 0.10752688172043011,
+        "n_tags": 5,
+        "n_valid_tags": 5
+      }
+    }
+  },
+  "test": {
+    "roc_auc": 0.8108088935069933,
+    "map": 0.277383763413432,
+    "macro_f1_default": 0.15515072311685502,
+    "macro_f1_tuned": 0.29882836159973175,
+    "micro_f1_default": 0.30278716216216217,
+    "micro_f1_tuned": 0.312144366769631,
+    "n_tags": 50,
+    "n_valid_tags": 50,
+    "groups": {
+      "genre": {
+        "roc_auc": 0.8439465199478394,
+        "map": 0.3222797956848163,
+        "macro_f1_default": 0.20067058553921963,
+        "macro_f1_tuned": 0.33845439021536855,
+        "micro_f1_default": 0.37084089534180276,
+        "micro_f1_tuned": 0.41000171262202434,
+        "n_tags": 31,
+        "n_valid_tags": 31
+      },
+      "instrument": {
+        "roc_auc": 0.7343260623355697,
+        "map": 0.1944832797430503,
+        "macro_f1_default": 0.07553765892186873,
+        "macro_f1_tuned": 0.21812725194366114,
+        "micro_f1_default": 0.15449202350965574,
+        "micro_f1_tuned": 0.21896002829854969,
+        "n_tags": 14,
+        "n_valid_tags": 14
+      },
+      "mood/theme": {
+        "roc_auc": 0.8195075368537333,
+        "map": 0.23114971760791772,
+        "macro_f1_default": 0.09584415584415584,
+        "macro_f1_tuned": 0.2791100912197814,
+        "micro_f1_default": 0.100418410041841,
+        "micro_f1_tuned": 0.25710754017305315,
+        "n_tags": 5,
+        "n_valid_tags": 5
+      }
+    }
+  },
+  "thresholds": {
+    "median": 0.33,
+    "min": 0.15,
+    "max": 0.5,
+    "per_tag": {
+      "genre---alternative": 0.33,
+      "genre---ambient": 0.37,
+      "genre---atmospheric": 0.22,
+      "genre---chillout": 0.27,
+      "genre---classical": 0.46,
+      "genre---dance": 0.37,
+      "genre---downtempo": 0.28,
+      "genre---easylistening": 0.41,
+      "genre---electronic": 0.48,
+      "genre---experimental": 0.33,
+      "genre---folk": 0.42,
+      "genre---funk": 0.41,
+      "genre---hiphop": 0.37,
+      "genre---house": 0.39,
+      "genre---indie": 0.37,
+      "genre---instrumentalpop": 0.32,
+      "genre---jazz": 0.36,
+      "genre---lounge": 0.28,
+      "genre---metal": 0.25,
+      "genre---newage": 0.31,
+      "genre---orchestral": 0.35,
+      "genre---pop": 0.42,
+      "genre---popfolk": 0.5,
+      "genre---poprock": 0.37,
+      "genre---reggae": 0.39,
+      "genre---rock": 0.42,
+      "genre---soundtrack": 0.37,
+      "genre---techno": 0.33,
+      "genre---trance": 0.31,
+      "genre---triphop": 0.34,
+      "genre---world": 0.38,
+      "instrument---acousticguitar": 0.27,
+      "instrument---bass": 0.3,
+      "instrument---computer": 0.16,
+      "instrument---drummachine": 0.17,
+      "instrument---drums": 0.34,
+      "instrument---electricguitar": 0.28,
+      "instrument---electricpiano": 0.15,
+      "instrument---guitar": 0.33,
+      "instrument---keyboard": 0.22,
+      "instrument---piano": 0.36,
+      "instrument---strings": 0.25,
+      "instrument---synthesizer": 0.28,
+      "instrument---violin": 0.22,
+      "instrument---voice": 0.19,
+      "mood/theme---emotional": 0.15,
+      "mood/theme---energetic": 0.26,
+      "mood/theme---film": 0.31,
+      "mood/theme---happy": 0.36,
+      "mood/theme---relaxing": 0.41
+    }
+  }
+}

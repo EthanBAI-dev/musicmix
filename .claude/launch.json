@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "/opt/anaconda3/envs/music-mix/bin/python",
+      "runtimeArgs": ["-m", "scripts.serve"],
+      "autoPort": true
+    }
+  ]
+}
