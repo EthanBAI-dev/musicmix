@@ -5,6 +5,34 @@
 
 ---
 
+## 2026-08-28 · htdemucs 浏览器转换实验：PyTorch 图成功，ONNX 被复数频谱阻断
+
+目标不是“有一个 `.onnx` 文件”，而是完整通过：导出→ONNX Runtime 推理→与
+PyTorch 输出对齐。使用 htdemucs 原始权重、固定 1 秒双声道输入实测。
+
+### 第一个障碍：依赖数据的调试断言
+
+`demucs.hdemucs.pad1d` 用张量比较检查 padding 前后数据是否相等。
+`torch.export` 不能把这种运行时布尔值当成图分支，报
+`GuardOnDataDependentSymNode`。这只是调试检查，删去它不改变数学计算。
+用等价无断言 `pad1d` 替换后，**完整 `torch.export` 成功**。
+
+### 第二个障碍：ONNX 不支持该复数 padding
+
+ONNX 翻译在第 3/3 阶段失败，精确节点为：
+
+```text
+aten.pad(view_as_complex, [0, 0, 0, 1])
+No decompositions registered for the complex-valued input
+```
+
+这发生在 `_ispec`（逆 STFT）之前。因此不是网络大小、内存或某个普通卷积，
+而是 htdemucs 把**复数 STFT/iSTFT 与神经网络写在同一前向图**里导致的格式边界。
+
+结论：原模型不能直接一键转换。下一条可行路线是把 STFT/iSTFT 移到浏览器 DSP，
+ONNX 只保留实数表示的神经网络核心；转换脚本保留在
+`scripts/export_htdemucs_onnx.py` 作为可重现的失败证据。
+
 ## 2026-08-27 · P6 三个实验：饱和点、消融复检、大模型变得多余
 
 整夜队列跑完三个实验，**预测在跑之前已写死存档**（`results/P6_预测.md`）。
