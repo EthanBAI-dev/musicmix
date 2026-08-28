@@ -73,6 +73,8 @@ venv/
 node_modules/
 web/dist/
 web/.vite/
+# OpenAI Sites 的独立部署工程，含托管项目标识，不属于本地版
+site/
 
 # === 系统 ===
 .DS_Store

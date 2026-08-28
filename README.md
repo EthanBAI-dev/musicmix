@@ -2,24 +2,40 @@
 
 > 上传一首歌 → 拆成人声/鼓/贝斯/其他四轨 → 自动分析 BPM、调性、和弦、曲式结构 → 打上风格/情绪/乐器标签 → 检索相似歌曲 → 在浏览器里重新混音。
 
-**当前状态：✅ M0 评测框架 · ✅ M1 分离 baseline 复现 · ✅ M2 混音台 → 下一步 M4（分离改进 + 消融）**
+**当前可用：上传本地歌曲 → htdemucs 四轨分离 → BPM/调性/和弦/曲式分析 → 浏览器混音与 WAV 导出。**
 
 ## 快速开始
 
-```bash
-conda create -n music-mix python=3.11 -y && conda activate music-mix
-pip install -e ".[eval,torch,dev]"
+macOS 需要先安装 FFmpeg（`brew install ffmpeg`）。Windows/Linux 请用系统包管理器安装 FFmpeg。
 
-python -m scripts.check_env                    # 环境自检（含 MPS 实测）
-python -m pytest tests/ -q                     # 111 条单测
-python -m scripts.run_separation_eval --synthetic 6 --model oracle   # 评测框架自检，不需要数据集
+```bash
+git clone https://github.com/EthanBAI-dev/musicmix.git
+cd musicmix
+conda create -n music-mix python=3.11 -y
+conda activate music-mix
+python -m pip install -e ".[sep]"
+python -m scripts.make_demo_stems
+python -m scripts.serve
 ```
 
-## 打开混音台网页
+打开 <http://localhost:8123/web/index.html>，点击“上传并分离”。首次分离会从
+HTDemucs 官方 Hugging Face 仓库自动下载约 **84 MB** 权重，之后使用本机缓存。
+
+> 权重没有复制进本仓库：它已接近 GitHub 普通文件的 100 MB 上限，
+> 而且 Demucs 本身能校验并缓存官方权重。这样 clone 更快，模型来源也更清楚。
+
+开发与评测环境：
 
 ```bash
-python -m scripts.make_demo_stems      # 生成演示曲（只需一次）
-python -m scripts.serve                # 开发用服务器，禁用缓存
+python -m pip install -e ".[eval,torch,sep,dev]"
+python -m scripts.check_env
+python -m pytest tests/ -q
+```
+
+## 本地使用
+
+```bash
+python -m scripts.serve
 ```
 
 然后打开 <http://localhost:8123/web/index.html>。
@@ -33,7 +49,8 @@ python -m scripts.serve                # 开发用服务器，禁用缓存
 - 频谱分析（对数频率轴）、逐轨电平表、波形图
 - 导出 WAV（`OfflineAudioContext` 离线渲染，20 秒曲子约 130ms）
 - 快捷键：空格播放/暂停、←/→ 前后 2 秒、Home 回到开头
-- 载入自己的音频：文件名含 `vocals` / `drums` / `bass` / `other` 即可（**正是 demucs 的默认输出命名**，P1 产出的 stem 可以直接拖进来）
+- 上传一首完整歌曲：后台自动分成 `vocals` / `drums` / `bass` / `other`
+- 载入已经分离的音轨：文件名含上述四个名称即可
 - **P1 失败案例听审**：下拉选案例，一键在「分离结果 / 真值」间 A/B（快捷键 `Tab`），
   切换时保持播放位置不变；每轨标注 cSDR 并区分「真实失败」与「指标假象」
 
@@ -99,6 +116,10 @@ MUSDB18-HQ test（50 首）上的完整锚点（cSDR，museval 中位数聚合�
 - **MTG-Jamendo** — 55,525 首 / 183 标签。元数据 CC BY-NC-SA 4.0，**仅限非商业研究与学术使用；商业使用需 Jamendo S.A. 书面授权**。
 
 本项目为个人学习与研究作品，不作商业用途。
+
+用户上传的原始音频只在本机临时存放，任务结束后删除；分离结果保存在
+`web/mine/` 供浏览器播放，该目录已被 Git 忽略，不会被上传。服务默认仅监听
+`127.0.0.1`，不向局域网或公网开放。
 
 ---
 
