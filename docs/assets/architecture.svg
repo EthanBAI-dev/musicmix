@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" width="980" height="560"
+     font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+  <style>
+    /* GitHub 会在明暗两种主题下渲染同一个文件，所以颜色必须两边都能看清。
+       做法：底色统一用不透明的深/浅中性色，文字固定深色，不依赖继承。 */
+    .box   { fill:#f4f6fa; stroke:#c3cbd8; stroke-width:1.5; rx:8; }
+    .mine  { fill:#e8f4ff; stroke:#4a9fd8; stroke-width:2.5; rx:8; }
+    .frozen{ fill:#f0efe8; stroke:#b8ad8a; stroke-width:1.5; stroke-dasharray:5 3; rx:8; }
+    .t     { fill:#1b2430; font-size:13px; }
+    .tb    { fill:#1b2430; font-size:14px; font-weight:600; }
+    .ts    { fill:#5b6673; font-size:11px; }
+    .num   { fill:#1a6b3c; font-size:11px; font-weight:600; }
+    .arrow { stroke:#8b96a8; stroke-width:1.8; fill:none; marker-end:url(#a); }
+    .lane  { fill:#fafbfc; stroke:#e1e6ed; stroke-width:1; rx:10; }
+    .lanet { fill:#8b96a8; font-size:11px; font-weight:600; letter-spacing:.08em; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b96a8"/>
+    </marker>
+  </defs>
+
+  <rect width="980" height="560" fill="#ffffff"/>
+
+  <!-- 图例 -->
+  <rect class="mine"   x="640" y="14" width="16" height="14"/>
+  <text class="ts" x="662" y="26">自己写 / 自己训</text>
+  <rect class="frozen" x="768" y="14" width="16" height="14"/>
+  <text class="ts" x="790" y="26">现成的（冻结，只前向）</text>
+
+  <!-- ============ 输入 ============ -->
+  <rect class="box" x="24" y="60" width="150" height="54"/>
+  <text class="tb" x="99" y="82" text-anchor="middle">上传一首歌</text>
+  <text class="ts" x="99" y="100" text-anchor="middle">mp3 / wav，≤200 MB</text>
+
+  <!-- ============ 泳道1：分离 ============ -->
+  <rect class="lane" x="204" y="46" width="230" height="150"/>
+  <text class="lanet" x="216" y="66">分离 · P1</text>
+
+  <rect class="frozen" x="222" y="78" width="194" height="48"/>
+  <text class="tb" x="319" y="98" text-anchor="middle">htdemucs (Demucs v4)</text>
+  <text class="ts" x="319" y="115" text-anchor="middle">Meta 预训练 · 98 MB</text>
+
+  <rect class="box" x="222" y="136" width="194" height="46"/>
+  <text class="t" x="319" y="154" text-anchor="middle">vocals / drums / bass / other</text>
+  <text class="num" x="319" y="171" text-anchor="middle">cSDR 8.80 dB · RTF 0.066</text>
+
+  <!-- ============ 泳道2：分析 ============ -->
+  <rect class="lane" x="204" y="212" width="230" height="176"/>
+  <text class="lanet" x="216" y="232">分析 · M6</text>
+
+  <rect class="mine" x="222" y="242" width="194" height="40"/>
+  <text class="t" x="319" y="259" text-anchor="middle">节拍 · 小节线相位检测</text>
+  <text class="num" x="319" y="274" text-anchor="middle">和弦 8/8 · 对齐 0.12 ms</text>
+
+  <rect class="box" x="222" y="290" width="194" height="38"/>
+  <text class="t" x="319" y="307" text-anchor="middle">调性（KK 轮廓相关）</text>
+  <text class="ts" x="319" y="321" text-anchor="middle">一并给出相对大小调</text>
+
+  <rect class="box" x="222" y="336" width="194" height="38"/>
+  <text class="t" x="319" y="353" text-anchor="middle">和弦 · 曲式分段</text>
+  <text class="ts" x="319" y="367" text-anchor="middle">只给 A/B/C，不编 verse/chorus</text>
+
+  <!-- ============ 泳道3：标签与检索 ============ -->
+  <rect class="lane" x="464" y="46" width="256" height="342"/>
+  <text class="lanet" x="476" y="66">标签与检索 · P4–P7</text>
+
+  <rect class="frozen" x="482" y="78" width="220" height="52"/>
+  <text class="tb" x="592" y="98" text-anchor="middle">MERT-v1-95M</text>
+  <text class="ts" x="592" y="115" text-anchor="middle">冻结 · 第 6 层 · 360 MB</text>
+
+  <rect class="mine" x="482" y="142" width="220" height="52"/>
+  <text class="tb" x="592" y="162" text-anchor="middle">全曲 4 段 × 30 秒</text>
+  <text class="num" x="592" y="179" text-anchor="middle">+0.0268 mAP · 5/5 · 零参数</text>
+
+  <rect class="mine" x="482" y="206" width="220" height="52"/>
+  <text class="tb" x="592" y="226" text-anchor="middle">标签头（自己训）</text>
+  <text class="num" x="592" y="243" text-anchor="middle">420,914 参数 · mAP 0.2879</text>
+
+  <rect class="mine" x="482" y="270" width="220" height="44"/>
+  <text class="t" x="592" y="288" text-anchor="middle">逐标签阈值优化</text>
+  <text class="num" x="592" y="304" text-anchor="middle">+0.126 MacroF1 · 只在推理期</text>
+
+  <rect class="mine" x="482" y="326" width="220" height="46"/>
+  <text class="t" x="592" y="344" text-anchor="middle">相似检索（精确，无 FAISS）</text>
+  <text class="num" x="592" y="360" text-anchor="middle">R@10 0.139 = 随机的 14 倍</text>
+
+  <!-- ============ 泳道4：输出 ============ -->
+  <rect class="lane" x="750" y="46" width="206" height="342"/>
+  <text class="lanet" x="762" y="66">输出</text>
+
+  <rect class="mine" x="768" y="78" width="170" height="76"/>
+  <text class="tb" x="853" y="98" text-anchor="middle">四轨混音台</text>
+  <text class="ts" x="853" y="115" text-anchor="middle">音量/独奏/声像/三段 EQ</text>
+  <text class="ts" x="853" y="131" text-anchor="middle">频谱 · 时间轴 · 导出 WAV</text>
+  <text class="ts" x="853" y="147" text-anchor="middle">原生 JS，零依赖零构建</text>
+
+  <rect class="mine" x="768" y="166" width="170" height="66"/>
+  <text class="tb" x="853" y="186" text-anchor="middle">自动 Mashup</text>
+  <text class="ts" x="853" y="203" text-anchor="middle">A 的伴奏 + B 的人声</text>
+  <text class="num" x="853" y="220" text-anchor="middle">逐小节对齐 0.12 ms</text>
+
+  <rect class="mine" x="768" y="244" width="170" height="60"/>
+  <text class="tb" x="853" y="264" text-anchor="middle">评测框架</text>
+  <text class="ts" x="853" y="281" text-anchor="middle">5 种子配对 · 一致性 k/n</text>
+  <text class="num" x="853" y="297" text-anchor="middle">218 条单测</text>
+
+  <rect class="box" x="768" y="316" width="170" height="56"/>
+  <text class="t" x="853" y="336" text-anchor="middle">失败案例听审</text>
+  <text class="ts" x="853" y="353" text-anchor="middle">分离结果 / 真值 A/B</text>
+  <text class="ts" x="853" y="367" text-anchor="middle">区分真实失败与指标假象</text>
+
+  <!-- ============ 连线 ============ -->
+  <path class="arrow" d="M174,87 L216,87"/>
+  <path class="arrow" d="M319,182 L319,238"/>
+  <path class="arrow" d="M99,114 L99,300 L216,300"/>
+  <path class="arrow" d="M416,104 L476,104"/>
+  <path class="arrow" d="M592,130 L592,138"/>
+  <path class="arrow" d="M592,194 L592,202"/>
+  <path class="arrow" d="M592,258 L592,266"/>
+  <path class="arrow" d="M592,314 L592,322"/>
+  <!-- 分离结果 → 混音台：走泳道上方（y=38）与泳道 3/4 之间的走廊（x=734），
+       不能走 y=116 —— 那条线会从 MERT 框里横穿过去 -->
+  <path class="arrow" d="M416,159 L446,159 L446,38 L734,38 L734,116 L762,116"/>
+  <!-- 曲式分析 → Mashup：走泳道下方（y=398）再从走廊上来 -->
+  <path class="arrow" d="M416,353 L446,353 L446,398 L734,398 L734,199 L762,199"/>
+  <path class="arrow" d="M702,349 L762,349"/>
+
+  <!-- ============ 底部结论 ============ -->
+  <rect x="24" y="410" width="932" height="128" rx="10" fill="#f7f9fc" stroke="#d8e0ea"/>
+  <text class="tb" x="44" y="436">七个动模型的改动，六个无效或有害；唯二有效的两个都不动模型。</text>
+  <text class="t" x="44" y="460">❌ 注意力池化 · 最大池化 · Focal / ASL 损失 · Stem-aware 融合 —— 全部证伪（5 种子配对，方向一致性 k/n）</text>
+  <text class="t" x="44" y="482">⚠️ 换 3.35× 大的基座 —— 有了好输入之后变得多余（−0.0014，2/5，不可区分）</text>
+  <text class="t" x="44" y="504">✅ 逐标签阈值优化（改推理期） · ✅ 窗口选择：喂哪 30 秒进去（改输入）</text>
+  <text class="ts" x="44" y="526">自己训练的部分只有 1.6 MB，其余 99% 是冻结基座 —— 这不是遗憾，正是结论本身：冻结特征之上，头部能做的事本来就很少。</text>
+</svg>

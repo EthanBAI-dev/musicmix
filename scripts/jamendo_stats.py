@@ -29,22 +29,11 @@ from src.datasets.jamendo import DEFAULT_ROOT, load_split, load_subset, tag_stat
 
 
 def _use_cjk_font() -> None:
-    """让图里的中文正常显示。
+    """选中文字体。实现在 :mod:`src.viz.fonts` —— 每个画图脚本都要，
+    复制一份的代价不是重复代码，是"某个脚本忘了调用"这种隐蔽失败。"""
+    from src.viz.fonts import use_cjk_font
 
-    不设的话 matplotlib 会用 DejaVu Sans，中文字符全部渲染成方框（且只在
-    stderr 里刷一堆 findfont 警告，图本身"看起来正常"地生成出来）。
-    """
-    import matplotlib
-    from matplotlib import font_manager
-
-    have = {f.name for f in font_manager.fontManager.ttflist}
-    for name in ("PingFang SC", "Heiti SC", "Hiragino Sans GB",
-                 "Arial Unicode MS", "Noto Sans CJK SC", "Microsoft YaHei"):
-        if name in have:
-            matplotlib.rcParams["font.sans-serif"] = [name, "DejaVu Sans"]
-            matplotlib.rcParams["axes.unicode_minus"] = False
-            return
-    print("⚠️  没找到中文字体，图中的中文会显示为方框")
+    use_cjk_font()
 
 
 def plot(stats: dict, counts: dict[str, int], out: Path, title: str) -> None:
