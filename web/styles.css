@@ -381,3 +381,12 @@ footer p { margin: 0; }
   color: var(--dim);
   vertical-align: .12em;
 }
+
+/* 静态托管下替代上传按钮的说明文字。用 .dim 的灰而不是警告色 ——
+   "此处不支持"不是错误，不该染成红的吓人。 */
+.static-note {
+  font-size: .85em;
+  padding: .3em .6em;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+}

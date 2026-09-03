@@ -1108,6 +1108,36 @@ async function exportWav() {
 
 /* ============================ 事件绑定 ============================ */
 
+/** 探测后端是否可用。
+ *
+ *  这个页面有两种部署方式：
+ *  - 跟着 `scripts/serve.py` 跑 → 有 /api，可以上传分离
+ *  - 静态托管（GitHub Pages 之类）→ **没有后端**，分离跑不了
+ *
+ *  静态托管下必须**提前把入口藏掉**，而不是等用户选完文件、
+ *  等 fetch 失败之后再弹一个"网络错误"——那时候他已经付出了操作成本，
+ *  而且错误信息把"这里不支持"说成了"出了故障"。
+ */
+async function probeBackend() {
+  try {
+    const r = await fetch('/api/jobs', { method: 'GET' });
+    return r.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function setupUploadAvailability() {
+  if (await probeBackend()) return;
+
+  const label = $('uploadLabel');
+  if (label) label.hidden = true;
+  const note = document.createElement('span');
+  note.className = 'dim static-note';
+  note.textContent = '静态托管：分离需要后端，本地跑 python -m scripts.serve 即可上传';
+  label?.parentNode?.insertBefore(note, label);
+}
+
 function bindGlobal() {
   $('playBtn').addEventListener('click', () => (S.playing ? pause() : play()));
   $('stopBtn').addEventListener('click', stop);
@@ -1171,6 +1201,7 @@ bindGlobal();
 renderRoadmap();
 loadDashboard();
 loadTagging();
+setupUploadAvailability();
 loadCaseManifest();
 loadDemo();
 requestAnimationFrame(tick);
