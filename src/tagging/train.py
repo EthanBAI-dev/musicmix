@@ -83,6 +83,10 @@ class TrainResult:
     thresholds: np.ndarray | None = None
     n_params: int = 0
     train_seconds: float = 0.0
+    # 训练好的权重（早停选出的最优 epoch）。检索与部署都要用它，
+    # 只留在内存里意味着每次都得重训 —— 96 秒虽不贵，但结果会因种子而异，
+    # 拿"另一次训练"的模型去解释"这一次训练"的指标是不对的。
+    state_dict: dict | None = None
 
 
 # --------------------------------------------------------------------------------------
@@ -177,6 +181,7 @@ def train(
 
     if best_state is not None:
         model.load_state_dict(best_state)
+    result.state_dict = best_state
     result.train_seconds = time.perf_counter() - t_start
 
     # ---- 阈值只在验证集上搜，然后固定住 ----
@@ -196,8 +201,25 @@ def train(
 # 结果记录
 # --------------------------------------------------------------------------------------
 
-def save_result(result: TrainResult, out: Path, tag_names: list[str] | None = None) -> None:
+def save_result(result: TrainResult, out: Path, tag_names: list[str] | None = None,
+                save_model: bool = False) -> None:
+    """写结果 JSON；``save_model=True`` 时另存权重到同名 ``.pt``。
+
+    权重默认**不存** —— 5 种子 × 十几个配置会堆出上百个 checkpoint，
+    而其中绝大多数只是用来算方差的，存下来没有意义。
+    只有要拿去做检索或部署的那一个才值得落盘。
+    """
     out.parent.mkdir(parents=True, exist_ok=True)
+
+    if save_model and result.state_dict is not None:
+        import torch
+
+        ckpt = out.with_suffix(".pt")
+        torch.save({"state_dict": result.state_dict,
+                    "config": result.config,
+                    "thresholds": result.thresholds,
+                    "tag_names": tag_names}, ckpt)
+        print(f"  权重 → {ckpt}")
 
     def dump(s: TaggingScores | None) -> dict | None:
         if s is None:

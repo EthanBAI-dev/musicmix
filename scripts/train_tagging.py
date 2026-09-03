@@ -59,6 +59,9 @@ def main() -> int:
     p.add_argument("--device", default="auto")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", default="")
+    p.add_argument("--save-model", action="store_true",
+                   help="把权重另存为同名 .pt（检索/部署要用）。默认不存 —— "
+                        "多种子实验会堆出上百个没用的 checkpoint")
     args = p.parse_args()
 
     use_segs = (tuple(int(v) for v in args.use_segments.split(","))
@@ -159,7 +162,7 @@ def main() -> int:
                    tag_groups=vocab.groups, test_loader=loaders["test"])
 
     out = Path(args.out or f"results/p4_{args.level.lower()}.json")
-    save_result(result, out, list(vocab.tags))
+    save_result(result, out, list(vocab.tags), save_model=args.save_model)
 
     v, t = result.val_scores, result.test_scores
     print(f"\n{'=' * 74}")
