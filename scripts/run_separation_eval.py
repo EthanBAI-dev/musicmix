@@ -61,6 +61,8 @@ REFERENCE_MODELS = ("silence", "trivial", "oracle")
 @dataclass
 class EvalConfig:
     model: str
+    # --model student 时指向权重文件；其他模型忽略
+    ckpt: str = ""
     device: str = "auto"
     overlap: float = 0.25
     shifts: int = 0
@@ -98,6 +100,34 @@ def build_separator(cfg: EvalConfig):
             est = ideal_ratio_mask(refs, mix)
             return {k: match_length(v, mix.shape[0]) for k, v in est.items()}
         return _oracle, "oracle（IRM 理想掩码，上界）"
+
+    if cfg.model == "student":
+        # 蒸馏出来的学生模型。走与 demucs 相同的评测路径，
+        # 这样它在表里的数字与教师**完全可比** —— 换个脚本评就没法比了。
+        if not cfg.ckpt:
+            raise ValueError("--model student 需要 --ckpt 指向训练好的权重")
+        import numpy as np
+        import torch
+
+        from src.separation.student import SOURCES, StudentUNet
+        from src.tagging.backbone import pick_device
+
+        ck = torch.load(cfg.ckpt, map_location="cpu", weights_only=False)
+        conf = ck.get("config", {})
+        dev = pick_device(cfg.device)
+        model = StudentUNet(**{k: v for k, v in conf.items() if k in ("base", "depth")})
+        model.load_state_dict(ck["state_dict"])
+        model.to(dev).eval()
+
+        @torch.no_grad()
+        def _student(mix, refs):
+            # mix 是 (n, 2)，模型要 (B, 2, n)
+            x = torch.from_numpy(np.ascontiguousarray(mix.T)).float()[None].to(dev)
+            out = model(x)[0].cpu().numpy()          # (S, 2, n)
+            return {name: out[i].T for i, name in enumerate(SOURCES)}
+
+        n_p = model.n_params
+        return _student, f"student（蒸馏，{n_p/1e6:.2f} M 参数，step {ck.get('step', '?')}）"
 
     from src.separation import demucs_model, postprocess
 
@@ -190,7 +220,8 @@ def run(args: argparse.Namespace) -> int:
         compute_csdr = False
 
     cfg = EvalConfig(
-        model=args.model, device=args.device, overlap=args.overlap, shifts=args.shifts,
+        model=args.model, ckpt=args.ckpt,
+        device=args.device, overlap=args.overlap, shifts=args.shifts,
         compute_csdr=compute_csdr, save_stems=args.save_stems,
         root=args.root, subset=args.subset, synthetic_seconds=args.synthetic_seconds,
         tta=tuple(args.tta), refine=args.refine, refine_alpha=args.refine_alpha,
@@ -359,7 +390,11 @@ def main() -> int:
         epilog=__doc__,
     )
     p.add_argument("--model", default="trivial",
-                   help="参照基线 silence/trivial/oracle，或 demucs 权重名 htdemucs / htdemucs_ft / mdx_extra …")
+                   help="参照基线 silence/trivial/oracle，"
+                        "蒸馏学生 student（配 --ckpt），"
+                        "或 demucs 权重名 htdemucs / htdemucs_ft / mdx_extra …")
+    p.add_argument("--ckpt", default="",
+                   help="--model student 时指向蒸馏出来的权重（.pt）")
     p.add_argument("--device", default="auto", choices=("auto", "cpu", "mps", "cuda"))
     p.add_argument("--overlap", type=float, default=0.25,
                    help="分块推理重叠率。官方默认 0.25，**做 baseline 不要改**")
