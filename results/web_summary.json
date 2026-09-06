@@ -1,6 +1,6 @@
 {
   "generated_by": "python -m scripts.build_web_summary",
-  "n_tests": 190,
+  "n_tests": 234,
   "ladder": [
     {
       "key": "L0",
