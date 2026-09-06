@@ -95,3 +95,47 @@ def test_gradients_flow(model):
     distill_loss(y, torch.randn_like(y)).backward()
     n_grad = sum(1 for p in model.parameters() if p.grad is not None and p.grad.abs().sum() > 0)
     assert n_grad > 10, "大部分参数应当拿到非零梯度"
+
+
+def test_chunked_matches_direct_on_short_audio():
+    """短音频（不触发分段）时，分段推理必须与直接前向完全一致。
+
+    不一致说明分段逻辑本身改变了结果，那样长音频上的数字就不可信。
+    """
+    from src.separation.student import separate_chunked
+
+    m = StudentUNet(base=8, depth=3).eval()
+    x = torch.randn(2, 4000)
+    with torch.no_grad():
+        direct = m(x[None])[0]
+    assert torch.allclose(separate_chunked(m, x, sr=44100, segment=10.0), direct, atol=1e-5)
+
+
+def test_chunked_preserves_length_on_long_audio():
+    """长音频必须触发分段，且输出长度不变。
+
+    这条对应一个真实故障：整首前向被系统 OOM kill（exit 137），
+    而单测里的 5 秒片段永远碰不到 —— 只有全曲长度才暴露。
+    """
+    from src.separation.student import separate_chunked
+
+    m = StudentUNet(base=8, depth=3).eval()
+    n = 44100 * 12                       # 12 秒 > segment，必然分段
+    y = separate_chunked(m, torch.randn(2, n), sr=44100, segment=4.0, overlap=0.25)
+    assert y.shape == (len(SOURCES), 2, n)
+
+
+def test_chunked_has_no_seam_energy_dip():
+    """重叠边界不该出现能量凹陷。
+
+    直接对重叠区取平均会留下凹陷（两段各贡献一半但相位未必对齐），
+    所以用线性淡入淡出加权 —— 这条测试就是防止有人改回简单平均。
+    """
+    from src.separation.student import separate_chunked
+
+    m = StudentUNet(base=8, depth=3).eval()
+    n = 44100 * 10
+    y = separate_chunked(m, torch.ones(2, n) * 0.1, sr=44100, segment=3.0, overlap=0.25)
+    env = y[0, 0].abs().reshape(-1, 4410).mean(dim=1)     # 每 0.1 秒的平均幅度
+    mid = env[2:-2]                                       # 掐掉首尾
+    assert mid.min() > mid.mean() * 0.5, "边界处能量掉了一半以上，说明重叠加权有问题"

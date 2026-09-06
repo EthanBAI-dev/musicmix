@@ -172,3 +172,51 @@ def distill_loss(student_out: torch.Tensor, teacher_out: torch.Tensor,
         se = torch.stft(e, n_fft, n_fft // 4, window=w, return_complex=True).abs()
         spec = spec + torch.nn.functional.l1_loss(sa, se)
     return loss + alpha * spec / 3
+
+
+@torch.no_grad()
+def separate_chunked(model: "StudentUNet", wav: torch.Tensor, sr: int = 44100,
+                     segment: float = 10.0, overlap: float = 0.25) -> torch.Tensor:
+    """分段推理 + 重叠相加。整首一次前向会爆内存。
+
+    ``(2, T)`` → ``(S, 2, T)``。
+
+    为什么必须有这个：一首 4 分钟的歌经 STFT 后是 513 × 41,400 帧，
+    U-Net 第一层 32 通道就要 **2.7 GB** 一个张量 —— 而这只是第一层。
+    实测整首前向直接被系统 OOM kill（exit 137）。
+
+    demucs 的 ``apply_model(split=True)`` 做的是同一件事；
+    学生模型漏掉它，只有在**全曲**上才会暴露 —— 单测里的 5 秒片段永远碰不到。
+
+    重叠部分用**线性淡入淡出**加权，而不是直接取平均：
+    直接平均会在边界留下能量凹陷（两段各贡献一半但相位未必对齐）。
+    """
+    device = next(model.parameters()).device
+    n = wav.shape[-1]
+    seg = int(segment * sr)
+    hop = max(1, int(seg * (1 - overlap)))
+
+    if n <= seg:
+        return model(wav[None].to(device))[0].cpu()
+
+    out = torch.zeros(len(SOURCES), wav.shape[0], n)
+    norm = torch.zeros(n)
+    # 淡入淡出窗：中间为 1，两端线性降到 0
+    ramp = int(seg * overlap / 2) or 1
+    win = torch.ones(seg)
+    win[:ramp] = torch.linspace(0, 1, ramp)
+    win[-ramp:] = torch.linspace(1, 0, ramp)
+
+    for start in range(0, n, hop):
+        end = min(start + seg, n)
+        chunk = wav[:, start:end]
+        if chunk.shape[-1] < 2:
+            break
+        est = model(chunk[None].to(device))[0].cpu()
+        w = win[: chunk.shape[-1]]
+        out[..., start:end] += est * w
+        norm[start:end] += w
+        if end >= n:
+            break
+
+    return out / norm.clamp(min=1e-8)

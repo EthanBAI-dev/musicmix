@@ -31,6 +31,8 @@ data/_uploads/**
 
 # === 模型权重 ===
 checkpoints/
+models/
+results/*.pt
 *.ckpt
 *.pth
 *.pt

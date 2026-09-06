@@ -5,9 +5,10 @@
 **数据全部来自已经跑过的实验**，不需要重跑。回答一个具体问题：
 *在推理期能做的几种选择里，哪些落在帕累托前沿上？*
 
-注意这张图上**没有蒸馏出来的学生模型** —— 路线图里的「蒸馏轻量模型」
-需要在 MUSDB18-HQ 上从头训练，是本项目最贵的一件事（预计几十小时）。
-在没做之前，图上不该出现一个想象中的点。
+蒸馏出来的学生**在图上**（2.17 dB / RTF 0.011）。它落在帕累托前沿上 ——
+**不是因为它好，而是因为没有别的点比它更快**。
+前沿上的点不等于好点，这正是帕累托图容易被误读的地方：
+它只说"在这个速度下没有更准的"，不说"这个准度可用"。
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ POINTS = [
     ("p2_a2_tta.json", "＋TTA", True),
     ("p2_a3_mask.json", "＋软掩码细化", True),
     ("p2_a4_mwf.json", "＋多通道维纳", True),
+    ("p8_student.json", "蒸馏学生（3.1 M）", True),
     ("p1_oracle.json", "IRM oracle（掩码类上界）", False),
 ]
 
@@ -83,6 +85,7 @@ def main() -> int:
         "＋软掩码细化": (8, -14),
         "＋多通道维纳": (8, 8),
         "IRM oracle（掩码类上界）": (-4, 12),
+        "蒸馏学生（3.1 M）": (12, 10),
     }
     for r in rows:
         on = r in front
@@ -100,7 +103,7 @@ def main() -> int:
     ax.set_ylim(min(sdrs) - 0.55, max(sdrs) + 0.45)
     ax.set_xlim(min(rtfs) - 0.012, max(rtfs) + 0.028)   # 右侧留白，否则 TTA 标签被切
     if lo_pt:
-        ax.text(0.015, 0.045,
+        ax.text(0.42, 0.045,
                 f"下界 {lo_pt['label']} = {lo_pt['sdr']:.2f} dB（超出纵轴范围，未画）",
                 transform=ax.transAxes, fontsize=8.5, color="#8b96a8")
     ax.set_xlabel("RTF（越小越快；0.066 ≈ 15× 实时）")

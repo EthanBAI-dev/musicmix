@@ -109,7 +109,7 @@ def build_separator(cfg: EvalConfig):
         import numpy as np
         import torch
 
-        from src.separation.student import SOURCES, StudentUNet
+        from src.separation.student import SOURCES, StudentUNet, separate_chunked
         from src.tagging.backbone import pick_device
 
         ck = torch.load(cfg.ckpt, map_location="cpu", weights_only=False)
@@ -121,9 +121,10 @@ def build_separator(cfg: EvalConfig):
 
         @torch.no_grad()
         def _student(mix, refs):
-            # mix 是 (n, 2)，模型要 (B, 2, n)
-            x = torch.from_numpy(np.ascontiguousarray(mix.T)).float()[None].to(dev)
-            out = model(x)[0].cpu().numpy()          # (S, 2, n)
+            # **必须分段推理**：整首一次前向会 OOM（实测 exit 137）。
+            # 4 分钟的歌 STFT 后 513×41,400 帧，U-Net 第一层就要 2.7 GB。
+            x = torch.from_numpy(np.ascontiguousarray(mix.T)).float()
+            out = separate_chunked(model, x, sr=44100).numpy()   # (S, 2, n)
             return {name: out[i].T for i, name in enumerate(SOURCES)}
 
         n_p = model.n_params
