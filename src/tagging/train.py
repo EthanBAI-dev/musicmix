@@ -202,7 +202,7 @@ def train(
 # --------------------------------------------------------------------------------------
 
 def save_result(result: TrainResult, out: Path, tag_names: list[str] | None = None,
-                save_model: bool = False) -> None:
+                save_model: bool = False, features: dict | None = None) -> None:
     """写结果 JSON；``save_model=True`` 时另存权重到同名 ``.pt``。
 
     权重默认**不存** —— 5 种子 × 十几个配置会堆出上百个 checkpoint，
@@ -215,8 +215,13 @@ def save_result(result: TrainResult, out: Path, tag_names: list[str] | None = No
         import torch
 
         ckpt = out.with_suffix(".pt")
+        # features 记录这个权重吃的是**哪份特征**（基座/层/段数/帧步长）。
+        # 第一版没存：best_model.pt 的 config 里只有 pooling 和 loss，
+        # 说不出自己是用第 6 层 4 段特征训的。配错特征加载**不会报错**，
+        # 只会静默给出错误的预测 —— 形状对得上的特征多的是。
         torch.save({"state_dict": result.state_dict,
                     "config": result.config,
+                    "features": features or {},
                     "thresholds": result.thresholds,
                     "tag_names": tag_names}, ckpt)
         print(f"  权重 → {ckpt}")
@@ -232,6 +237,7 @@ def save_result(result: TrainResult, out: Path, tag_names: list[str] | None = No
     payload = {
         "level": result.level,
         "config": result.config,
+        "features": features or {},
         "n_params": result.n_params,
         "best_epoch": result.best_epoch,
         "train_seconds": result.train_seconds,

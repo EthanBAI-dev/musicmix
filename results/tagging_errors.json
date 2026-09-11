@@ -1,0 +1,891 @@
+{
+  "checkpoint": "results/best_model.pt",
+  "layer": 6,
+  "segments": 4,
+  "n_test": 1113,
+  "mean_ap": 0.28977933539377565,
+  "spearman_ap_vs_logfreq": {
+    "rho": 0.5812803177174567,
+    "p": 9.5804868390418e-06
+  },
+  "spearman_lift_vs_logfreq": {
+    "rho": -0.19142294666406004,
+    "p": 0.18296475093033987
+  },
+  "tags": [
+    {
+      "tag": "alternative",
+      "category": "genre",
+      "ap": 0.10193962168667445,
+      "prevalence": 0.039532795548439026,
+      "lift": 2.57860898204806,
+      "n_train": 187,
+      "n_test": 44
+    },
+    {
+      "tag": "ambient",
+      "category": "genre",
+      "ap": 0.47386597736988617,
+      "prevalence": 0.15004491806030273,
+      "lift": 3.1581607927530104,
+      "n_train": 393,
+      "n_test": 167
+    },
+    {
+      "tag": "atmospheric",
+      "category": "genre",
+      "ap": 0.03535150545561768,
+      "prevalence": 0.019766397774219513,
+      "lift": 1.7884647399803506,
+      "n_train": 61,
+      "n_test": 22
+    },
+    {
+      "tag": "chillout",
+      "category": "genre",
+      "ap": 0.17556422106789563,
+      "prevalence": 0.05480682849884033,
+      "lift": 3.2033275027328103,
+      "n_train": 237,
+      "n_test": 61
+    },
+    {
+      "tag": "classical",
+      "category": "genre",
+      "ap": 0.8207676084501659,
+      "prevalence": 0.09074573218822479,
+      "lift": 9.044696523553634,
+      "n_train": 348,
+      "n_test": 101
+    },
+    {
+      "tag": "dance",
+      "category": "genre",
+      "ap": 0.3688804030519948,
+      "prevalence": 0.050314463675022125,
+      "lift": 7.331498263294021,
+      "n_train": 170,
+      "n_test": 56
+    },
+    {
+      "tag": "downtempo",
+      "category": "genre",
+      "ap": 0.04700250089110368,
+      "prevalence": 0.011680143885314465,
+      "lift": 4.024137146991852,
+      "n_train": 75,
+      "n_test": 13
+    },
+    {
+      "tag": "easylistening",
+      "category": "genre",
+      "ap": 0.28168163611890906,
+      "prevalence": 0.09074573218822479,
+      "lift": 3.1040758537783906,
+      "n_train": 362,
+      "n_test": 101
+    },
+    {
+      "tag": "electronic",
+      "category": "genre",
+      "ap": 0.6003889605814339,
+      "prevalence": 0.2938005328178406,
+      "lift": 2.0435257717986555,
+      "n_train": 934,
+      "n_test": 327
+    },
+    {
+      "tag": "experimental",
+      "category": "genre",
+      "ap": 0.4252299918555363,
+      "prevalence": 0.07816711813211441,
+      "lift": 5.440011119980558,
+      "n_train": 193,
+      "n_test": 87
+    },
+    {
+      "tag": "folk",
+      "category": "genre",
+      "ap": 0.5999718091336128,
+      "prevalence": 0.095238097012043,
+      "lift": 6.299703878561806,
+      "n_train": 167,
+      "n_test": 106
+    },
+    {
+      "tag": "funk",
+      "category": "genre",
+      "ap": 0.1075752220381886,
+      "prevalence": 0.025157231837511063,
+      "lift": 4.276115223368374,
+      "n_train": 69,
+      "n_test": 28
+    },
+    {
+      "tag": "hiphop",
+      "category": "genre",
+      "ap": 0.7486984746364642,
+      "prevalence": 0.057502247393131256,
+      "lift": 13.020334136121043,
+      "n_train": 138,
+      "n_test": 64
+    },
+    {
+      "tag": "house",
+      "category": "genre",
+      "ap": 0.597395801238989,
+      "prevalence": 0.039532795548439026,
+      "lift": 15.111397839472486,
+      "n_train": 122,
+      "n_test": 44
+    },
+    {
+      "tag": "indie",
+      "category": "genre",
+      "ap": 0.20404901912928025,
+      "prevalence": 0.05121293663978577,
+      "lift": 3.984325690293667,
+      "n_train": 153,
+      "n_test": 57
+    },
+    {
+      "tag": "instrumentalpop",
+      "category": "genre",
+      "ap": 0.0851677514752717,
+      "prevalence": 0.025157231837511063,
+      "lift": 3.385418237799958,
+      "n_train": 92,
+      "n_test": 28
+    },
+    {
+      "tag": "jazz",
+      "category": "genre",
+      "ap": 0.56631269909713,
+      "prevalence": 0.03773584961891174,
+      "lift": 15.007286302447953,
+      "n_train": 146,
+      "n_test": 42
+    },
+    {
+      "tag": "lounge",
+      "category": "genre",
+      "ap": 0.16065434088156583,
+      "prevalence": 0.03144654259085655,
+      "lift": 5.10880776216963,
+      "n_train": 161,
+      "n_test": 35
+    },
+    {
+      "tag": "metal",
+      "category": "genre",
+      "ap": 0.8205207860563044,
+      "prevalence": 0.027852650731801987,
+      "lift": 29.459342809316126,
+      "n_train": 69,
+      "n_test": 31
+    },
+    {
+      "tag": "newage",
+      "category": "genre",
+      "ap": 0.264269115844889,
+      "prevalence": 0.03773584961891174,
+      "lift": 7.003131465534768,
+      "n_train": 121,
+      "n_test": 42
+    },
+    {
+      "tag": "orchestral",
+      "category": "genre",
+      "ap": 0.22306523795078687,
+      "prevalence": 0.0368373766541481,
+      "lift": 6.0554050861183795,
+      "n_train": 134,
+      "n_test": 41
+    },
+    {
+      "tag": "pop",
+      "category": "genre",
+      "ap": 0.4365879660682222,
+      "prevalence": 0.17789757251739502,
+      "lift": 2.4541535890015145,
+      "n_train": 443,
+      "n_test": 198
+    },
+    {
+      "tag": "popfolk",
+      "category": "genre",
+      "ap": 0.30091894556973686,
+      "prevalence": 0.061994608491659164,
+      "lift": 4.853953479038792,
+      "n_train": 114,
+      "n_test": 69
+    },
+    {
+      "tag": "poprock",
+      "category": "genre",
+      "ap": 0.24005330403305067,
+      "prevalence": 0.05121293663978577,
+      "lift": 4.687356745845357,
+      "n_train": 106,
+      "n_test": 57
+    },
+    {
+      "tag": "reggae",
+      "category": "genre",
+      "ap": 0.2393583722729557,
+      "prevalence": 0.01707097887992859,
+      "lift": 14.021361865451325,
+      "n_train": 78,
+      "n_test": 19
+    },
+    {
+      "tag": "rock",
+      "category": "genre",
+      "ap": 0.6268270624023775,
+      "prevalence": 0.12039532512426376,
+      "lift": 5.206406990931,
+      "n_train": 385,
+      "n_test": 134
+    },
+    {
+      "tag": "soundtrack",
+      "category": "genre",
+      "ap": 0.42216464928145014,
+      "prevalence": 0.15184186398983002,
+      "lift": 2.780291536132128,
+      "n_train": 430,
+      "n_test": 169
+    },
+    {
+      "tag": "techno",
+      "category": "genre",
+      "ap": 0.3205642769766766,
+      "prevalence": 0.033243484795093536,
+      "lift": 9.642920378310919,
+      "n_train": 150,
+      "n_test": 37
+    },
+    {
+      "tag": "trance",
+      "category": "genre",
+      "ap": 0.13678674693795317,
+      "prevalence": 0.016172505915164948,
+      "lift": 8.457980949612041,
+      "n_train": 76,
+      "n_test": 18
+    },
+    {
+      "tag": "triphop",
+      "category": "genre",
+      "ap": 0.056315039366577786,
+      "prevalence": 0.009883198887109756,
+      "lift": 5.698057886908169,
+      "n_train": 64,
+      "n_test": 11
+    },
+    {
+      "tag": "world",
+      "category": "genre",
+      "ap": 0.056252525613769436,
+      "prevalence": 0.027852650731801987,
+      "lift": 2.019647112062503,
+      "n_train": 135,
+      "n_test": 31
+    },
+    {
+      "tag": "acousticguitar",
+      "category": "instrument",
+      "ap": 0.16764652825620388,
+      "prevalence": 0.0476190485060215,
+      "lift": 3.5205770278044244,
+      "n_train": 116,
+      "n_test": 53
+    },
+    {
+      "tag": "bass",
+      "category": "instrument",
+      "ap": 0.21681658068960116,
+      "prevalence": 0.095238097012043,
+      "lift": 2.276574054836316,
+      "n_train": 276,
+      "n_test": 106
+    },
+    {
+      "tag": "computer",
+      "category": "instrument",
+      "ap": 0.059168096071445755,
+      "prevalence": 0.04582210257649422,
+      "lift": 1.2912566806089285,
+      "n_train": 65,
+      "n_test": 51
+    },
+    {
+      "tag": "drummachine",
+      "category": "instrument",
+      "ap": 0.023981352259408676,
+      "prevalence": 0.013477088883519173,
+      "lift": 1.779416346265619,
+      "n_train": 92,
+      "n_test": 15
+    },
+    {
+      "tag": "drums",
+      "category": "instrument",
+      "ap": 0.24486605219522015,
+      "prevalence": 0.1105121299624443,
+      "lift": 2.2157391435531446,
+      "n_train": 315,
+      "n_test": 123
+    },
+    {
+      "tag": "electricguitar",
+      "category": "instrument",
+      "ap": 0.14353398505560966,
+      "prevalence": 0.06469002366065979,
+      "lift": 2.218796298615324,
+      "n_train": 221,
+      "n_test": 72
+    },
+    {
+      "tag": "electricpiano",
+      "category": "instrument",
+      "ap": 0.04429932674646679,
+      "prevalence": 0.010781670920550823,
+      "lift": 4.10876264661615,
+      "n_train": 49,
+      "n_test": 12
+    },
+    {
+      "tag": "guitar",
+      "category": "instrument",
+      "ap": 0.27411664704974087,
+      "prevalence": 0.0997304618358612,
+      "lift": 2.748574928900747,
+      "n_train": 278,
+      "n_test": 111
+    },
+    {
+      "tag": "keyboard",
+      "category": "instrument",
+      "ap": 0.3584147962625488,
+      "prevalence": 0.03054806776344776,
+      "lift": 11.732813971671538,
+      "n_train": 95,
+      "n_test": 34
+    },
+    {
+      "tag": "piano",
+      "category": "instrument",
+      "ap": 0.6189326062604521,
+      "prevalence": 0.17250673472881317,
+      "lift": 3.587875031275947,
+      "n_train": 420,
+      "n_test": 192
+    },
+    {
+      "tag": "strings",
+      "category": "instrument",
+      "ap": 0.18169654857140966,
+      "prevalence": 0.05480682849884033,
+      "lift": 3.3152173469635122,
+      "n_train": 56,
+      "n_test": 61
+    },
+    {
+      "tag": "synthesizer",
+      "category": "instrument",
+      "ap": 0.2490585120683656,
+      "prevalence": 0.11500449478626251,
+      "lift": 2.1656415475868522,
+      "n_train": 443,
+      "n_test": 128
+    },
+    {
+      "tag": "violin",
+      "category": "instrument",
+      "ap": 0.18478830400647026,
+      "prevalence": 0.03593890368938446,
+      "lift": 5.141734583880825,
+      "n_train": 96,
+      "n_test": 40
+    },
+    {
+      "tag": "voice",
+      "category": "instrument",
+      "ap": 0.06548154917189106,
+      "prevalence": 0.022461814805865288,
+      "lift": 2.915238583250733,
+      "n_train": 81,
+      "n_test": 25
+    },
+    {
+      "tag": "emotional",
+      "category": "mood/theme",
+      "ap": 0.08767976228452973,
+      "prevalence": 0.0368373766541481,
+      "lift": 2.3801847538634777,
+      "n_train": 52,
+      "n_test": 41
+    },
+    {
+      "tag": "energetic",
+      "category": "mood/theme",
+      "ap": 0.07828441276429418,
+      "prevalence": 0.02425876073539257,
+      "lift": 3.2270573760216994,
+      "n_train": 96,
+      "n_test": 27
+    },
+    {
+      "tag": "film",
+      "category": "mood/theme",
+      "ap": 0.3893038669117153,
+      "prevalence": 0.06738544255495071,
+      "lift": 5.7772695726417505,
+      "n_train": 98,
+      "n_test": 75
+    },
+    {
+      "tag": "happy",
+      "category": "mood/theme",
+      "ap": 0.25095672715805395,
+      "prevalence": 0.033243484795093536,
+      "lift": 7.549049947828968,
+      "n_train": 110,
+      "n_test": 37
+    },
+    {
+      "tag": "relaxing",
+      "category": "mood/theme",
+      "ap": 0.3057595433708839,
+      "prevalence": 0.039532795548439026,
+      "lift": 7.734326377102289,
+      "n_train": 89,
+      "n_test": 44
+    }
+  ],
+  "categories": {
+    "genre": {
+      "n_tags": 31,
+      "mean_ap": 0.34013488943659587,
+      "mean_lift": 6.782255021335783,
+      "mean_prevalence": 0.06492189317941666
+    },
+    "instrument": {
+      "n_tags": 14,
+      "mean_ap": 0.2023429203332025,
+      "mean_lift": 3.501301299416433,
+      "mean_prevalence": 0.06565268337726593
+    },
+    "mood/theme": {
+      "n_tags": 5,
+      "mean_ap": 0.22239686249789542,
+      "mean_lift": 5.333577605491637,
+      "mean_prevalence": 0.04025157541036606
+    }
+  },
+  "hardest_after_frequency": [
+    {
+      "tag": "genre---alternative",
+      "residual": -0.22700533164436706
+    },
+    {
+      "tag": "genre---world",
+      "residual": -0.2228255651204657
+    },
+    {
+      "tag": "instrument---synthesizer",
+      "residual": -0.2122410565150485
+    },
+    {
+      "tag": "instrument---electricguitar",
+      "residual": -0.21101309815198172
+    },
+    {
+      "tag": "instrument---drummachine",
+      "residual": -0.1965639205155551
+    },
+    {
+      "tag": "genre---chillout",
+      "residual": -0.1897010141763922
+    },
+    {
+      "tag": "instrument---bass",
+      "residual": -0.1718193786567321
+    },
+    {
+      "tag": "instrument---drums",
+      "residual": -0.16405699811056548
+    },
+    {
+      "tag": "mood/theme---energetic",
+      "residual": -0.148746503824963
+    },
+    {
+      "tag": "genre---easylistening",
+      "residual": -0.1485967140369982
+    }
+  ],
+  "confusions": [
+    {
+      "present": "dance",
+      "false_fire": "electronic",
+      "fp_given_present": 0.9090909090909091,
+      "base_fp": 0.22391857506361323,
+      "excess": 0.6851723340272958,
+      "cooccur": 0.6071428656578064,
+      "support": 22
+    },
+    {
+      "present": "house",
+      "false_fire": "electronic",
+      "fp_given_present": 0.875,
+      "base_fp": 0.22391857506361323,
+      "excess": 0.6510814249363868,
+      "cooccur": 0.4545454680919647,
+      "support": 24
+    },
+    {
+      "present": "popfolk",
+      "false_fire": "pop",
+      "fp_given_present": 0.95,
+      "base_fp": 0.31256830601092894,
+      "excess": 0.637431693989071,
+      "cooccur": 0.4202898442745209,
+      "support": 40
+    },
+    {
+      "present": "film",
+      "false_fire": "soundtrack",
+      "fp_given_present": 0.8205128205128205,
+      "base_fp": 0.1853813559322034,
+      "excess": 0.6351314645806171,
+      "cooccur": 0.47999998927116394,
+      "support": 39
+    },
+    {
+      "present": "classical",
+      "false_fire": "soundtrack",
+      "fp_given_present": 0.7894736842105263,
+      "base_fp": 0.1853813559322034,
+      "excess": 0.6040923282783229,
+      "cooccur": 0.4356435537338257,
+      "support": 57
+    },
+    {
+      "present": "house",
+      "false_fire": "dance",
+      "fp_given_present": 0.6666666666666666,
+      "base_fp": 0.06717123935666983,
+      "excess": 0.5994954273099968,
+      "cooccur": 0.4545454680919647,
+      "support": 24
+    },
+    {
+      "present": "strings",
+      "false_fire": "soundtrack",
+      "fp_given_present": 0.78,
+      "base_fp": 0.1853813559322034,
+      "excess": 0.5946186440677966,
+      "cooccur": 0.1803278625011444,
+      "support": 50
+    },
+    {
+      "present": "hiphop",
+      "false_fire": "drummachine",
+      "fp_given_present": 0.9838709677419355,
+      "base_fp": 0.40437158469945356,
+      "excess": 0.5794993830424819,
+      "cooccur": 0.03125,
+      "support": 62
+    },
+    {
+      "present": "house",
+      "false_fire": "synthesizer",
+      "fp_given_present": 0.9565217391304348,
+      "base_fp": 0.37969543147208124,
+      "excess": 0.5768263076583535,
+      "cooccur": 0.47727271914482117,
+      "support": 23
+    },
+    {
+      "present": "folk",
+      "false_fire": "pop",
+      "fp_given_present": 0.8846153846153846,
+      "base_fp": 0.31256830601092894,
+      "excess": 0.5720470786044556,
+      "cooccur": 0.2641509473323822,
+      "support": 78
+    },
+    {
+      "present": "jazz",
+      "false_fire": "drums",
+      "fp_given_present": 0.88,
+      "base_fp": 0.3202020202020202,
+      "excess": 0.5597979797979797,
+      "cooccur": 0.4047619104385376,
+      "support": 25
+    },
+    {
+      "present": "dance",
+      "false_fire": "synthesizer",
+      "fp_given_present": 0.9285714285714286,
+      "base_fp": 0.37969543147208124,
+      "excess": 0.5488759970993473,
+      "cooccur": 0.25,
+      "support": 42
+    },
+    {
+      "present": "poprock",
+      "false_fire": "pop",
+      "fp_given_present": 0.8529411764705882,
+      "base_fp": 0.31256830601092894,
+      "excess": 0.5403728704596593,
+      "cooccur": 0.4035087823867798,
+      "support": 34
+    },
+    {
+      "present": "techno",
+      "false_fire": "synthesizer",
+      "fp_given_present": 0.9166666666666666,
+      "base_fp": 0.37969543147208124,
+      "excess": 0.5369712351945855,
+      "cooccur": 0.027027027681469917,
+      "support": 36
+    },
+    {
+      "present": "folk",
+      "false_fire": "guitar",
+      "fp_given_present": 0.7439024390243902,
+      "base_fp": 0.218562874251497,
+      "excess": 0.5253395647728932,
+      "cooccur": 0.22641509771347046,
+      "support": 82
+    },
+    {
+      "present": "rock",
+      "false_fire": "electricguitar",
+      "fp_given_present": 0.9074074074074074,
+      "base_fp": 0.3871277617675312,
+      "excess": 0.5202796456398762,
+      "cooccur": 0.19402985274791718,
+      "support": 108
+    },
+    {
+      "present": "orchestral",
+      "false_fire": "soundtrack",
+      "fp_given_present": 0.7,
+      "base_fp": 0.1853813559322034,
+      "excess": 0.5146186440677966,
+      "cooccur": 0.5121951103210449,
+      "support": 20
+    },
+    {
+      "present": "rock",
+      "false_fire": "drums",
+      "fp_given_present": 0.8316831683168316,
+      "base_fp": 0.3202020202020202,
+      "excess": 0.5114811481148114,
+      "cooccur": 0.24626865983009338,
+      "support": 101
+    },
+    {
+      "present": "jazz",
+      "false_fire": "bass",
+      "fp_given_present": 0.8275862068965517,
+      "base_fp": 0.31678252234359483,
+      "excess": 0.5108036845529569,
+      "cooccur": 0.3095238208770752,
+      "support": 29
+    },
+    {
+      "present": "lounge",
+      "false_fire": "electricpiano",
+      "fp_given_present": 0.9090909090909091,
+      "base_fp": 0.40054495912806537,
+      "excess": 0.5085459499628437,
+      "cooccur": 0.05714285746216774,
+      "support": 33
+    },
+    {
+      "present": "indie",
+      "false_fire": "bass",
+      "fp_given_present": 0.8157894736842105,
+      "base_fp": 0.31678252234359483,
+      "excess": 0.4990069513406157,
+      "cooccur": 0.3333333432674408,
+      "support": 38
+    },
+    {
+      "present": "poprock",
+      "false_fire": "drums",
+      "fp_given_present": 0.813953488372093,
+      "base_fp": 0.3202020202020202,
+      "excess": 0.4937514681700728,
+      "cooccur": 0.24561403691768646,
+      "support": 43
+    },
+    {
+      "present": "rock",
+      "false_fire": "pop",
+      "fp_given_present": 0.8041237113402062,
+      "base_fp": 0.31256830601092894,
+      "excess": 0.4915554053292773,
+      "cooccur": 0.2761194109916687,
+      "support": 97
+    },
+    {
+      "present": "house",
+      "false_fire": "drummachine",
+      "fp_given_present": 0.8863636363636364,
+      "base_fp": 0.40437158469945356,
+      "excess": 0.4819920516641828,
+      "cooccur": 0.0,
+      "support": 44
+    },
+    {
+      "present": "instrumentalpop",
+      "false_fire": "drums",
+      "fp_given_present": 0.8,
+      "base_fp": 0.3202020202020202,
+      "excess": 0.47979797979797983,
+      "cooccur": 0.1071428582072258,
+      "support": 25
+    },
+    {
+      "present": "rock",
+      "false_fire": "bass",
+      "fp_given_present": 0.7941176470588235,
+      "base_fp": 0.31678252234359483,
+      "excess": 0.47733512471522865,
+      "cooccur": 0.23880596458911896,
+      "support": 102
+    },
+    {
+      "present": "poprock",
+      "false_fire": "electricguitar",
+      "fp_given_present": 0.8571428571428571,
+      "base_fp": 0.3871277617675312,
+      "excess": 0.4700150953753259,
+      "cooccur": 0.14035087823867798,
+      "support": 49
+    },
+    {
+      "present": "folk",
+      "false_fire": "popfolk",
+      "fp_given_present": 0.5362318840579711,
+      "base_fp": 0.06704980842911877,
+      "excess": 0.4691820756288523,
+      "cooccur": 0.349056601524353,
+      "support": 69
+    },
+    {
+      "present": "house",
+      "false_fire": "computer",
+      "fp_given_present": 1.0,
+      "base_fp": 0.5414312617702448,
+      "excess": 0.4585687382297552,
+      "cooccur": 0.022727273404598236,
+      "support": 43
+    },
+    {
+      "present": "jazz",
+      "false_fire": "electricpiano",
+      "fp_given_present": 0.8536585365853658,
+      "base_fp": 0.40054495912806537,
+      "excess": 0.45311357745730046,
+      "cooccur": 0.02380952425301075,
+      "support": 41
+    },
+    {
+      "present": "dance",
+      "false_fire": "drummachine",
+      "fp_given_present": 0.8571428571428571,
+      "base_fp": 0.40437158469945356,
+      "excess": 0.45277127244340354,
+      "cooccur": 0.0,
+      "support": 56
+    },
+    {
+      "present": "guitar",
+      "false_fire": "pop",
+      "fp_given_present": 0.7530864197530864,
+      "base_fp": 0.31256830601092894,
+      "excess": 0.4405181137421575,
+      "cooccur": 0.2702702581882477,
+      "support": 81
+    },
+    {
+      "present": "lounge",
+      "false_fire": "chillout",
+      "fp_given_present": 0.6538461538461539,
+      "base_fp": 0.217680608365019,
+      "excess": 0.43616554548113484,
+      "cooccur": 0.2571428716182709,
+      "support": 26
+    },
+    {
+      "present": "classical",
+      "false_fire": "emotional",
+      "fp_given_present": 0.5802469135802469,
+      "base_fp": 0.1455223880597015,
+      "excess": 0.4347245255205454,
+      "cooccur": 0.19801980257034302,
+      "support": 81
+    },
+    {
+      "present": "techno",
+      "false_fire": "computer",
+      "fp_given_present": 0.972972972972973,
+      "base_fp": 0.5414312617702448,
+      "excess": 0.4315417112027282,
+      "cooccur": 0.0,
+      "support": 37
+    },
+    {
+      "present": "indie",
+      "false_fire": "drums",
+      "fp_given_present": 0.75,
+      "base_fp": 0.3202020202020202,
+      "excess": 0.4297979797979798,
+      "cooccur": 0.4385964870452881,
+      "support": 32
+    },
+    {
+      "present": "indie",
+      "false_fire": "pop",
+      "fp_given_present": 0.7391304347826086,
+      "base_fp": 0.31256830601092894,
+      "excess": 0.4265621287716797,
+      "cooccur": 0.19298245012760162,
+      "support": 46
+    },
+    {
+      "present": "energetic",
+      "false_fire": "guitar",
+      "fp_given_present": 0.6296296296296297,
+      "base_fp": 0.218562874251497,
+      "excess": 0.41106675537813264,
+      "cooccur": 0.0,
+      "support": 27
+    },
+    {
+      "present": "poprock",
+      "false_fire": "bass",
+      "fp_given_present": 0.7272727272727273,
+      "base_fp": 0.31678252234359483,
+      "excess": 0.41049020492913246,
+      "cooccur": 0.42105263471603394,
+      "support": 33
+    },
+    {
+      "present": "dance",
+      "false_fire": "computer",
+      "fp_given_present": 0.9454545454545454,
+      "base_fp": 0.5414312617702448,
+      "excess": 0.4040232836843006,
+      "cooccur": 0.01785714365541935,
+      "support": 55
+    }
+  ]
+}

@@ -215,6 +215,25 @@ def main() -> int:
             f"（+{t['macro_f1_tuned'] - t['macro_f1_default']:.4f}），mAP 一字不变。")
 
     # ---------------- 检索 ----------------
+    # 错误分析（P9）。数字同样从 JSON 读
+    terr = load("tagging_errors.json")
+    if terr:
+        s1, s2 = terr["spearman_ap_vs_logfreq"], terr["spearman_lift_vs_logfreq"]
+        add("")
+        add("### 错误分析：难在哪里")
+        add("")
+        add(f"原始 AP 与训练频次 ρ={s1['rho']:+.2f}（p={s1['p']:.0e}，显著）；"
+            f"换成提升倍数（AP÷正例率）后 ρ={s2['rho']:+.2f}（p={s2['p']:.2f}，不显著）。"
+            "**按原始 AP 找「最差标签」只是在排稀有度。**")
+        add("")
+        add("| 类别 | 平均提升倍数 | 平均正例率 |")
+        add("|---|---|---|")
+        for c, v in terr["categories"].items():
+            add(f"| {c} | {v['mean_lift']:.1f}× | {v['mean_prevalence']:.3f} |")
+        add("")
+        add("乐器与风格正例率相近、提升倍数却差一倍 —— **乐器是真难，不是真稀有**。"
+            "详见 [P9_标签错误分析](P9_标签错误分析.md)。")
+
     ret = load("p7_retrieval.json")
     if ret:
         add("")

@@ -162,7 +162,10 @@ def main() -> int:
                    tag_groups=vocab.groups, test_loader=loaders["test"])
 
     out = Path(args.out or f"results/p4_{args.level.lower()}.json")
-    save_result(result, out, list(vocab.tags), save_model=args.save_model)
+    save_result(result, out, list(vocab.tags), save_model=args.save_model,
+                features={"backbone": args.backbone, "layer": args.layer,
+                          "segments": args.segments, "use_segments": args.use_segments,
+                          "frame_stride": args.frame_stride})
 
     v, t = result.val_scores, result.test_scores
     print(f"\n{'=' * 74}")
