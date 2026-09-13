@@ -64,6 +64,12 @@ def main() -> int:
                         "多种子实验会堆出上百个没用的 checkpoint")
     args = p.parse_args()
 
+    # Seed BEFORE constructing the model, not only inside train().
+    import random
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+
     use_segs = (tuple(int(v) for v in args.use_segments.split(","))
                 if args.use_segments.strip() else None)
     root = Path(args.root)

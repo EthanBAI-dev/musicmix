@@ -1,0 +1,8 @@
+# Keep Colab's matching torch/CUDA installation. Dedicated tagging environment;
+# do not install the project's separation dependencies in this runtime.
+transformers==4.44.2
+huggingface-hub==0.34.4
+librosa==0.11.0
+soundfile==0.13.1
+scikit-learn==1.6.1
+nnAudio==0.3.3
