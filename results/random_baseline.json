@@ -1,0 +1,11 @@
+{
+  "map": 0.068080930840335,
+  "n_trials": 20,
+  "seed": 0,
+  "subset": "autotagging_top50tags",
+  "split": 0,
+  "n_test_tracks": 1113,
+  "n_valid_tags": 50,
+  "note": "随机打分的测试集 mAP；测试集为当时本地可用的 10 块（00-09）子集",
+  "generated_by": "scripts/build_summary.py:random_tagging_map"
+}

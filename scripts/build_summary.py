@@ -51,9 +51,21 @@ def parse_paired_ablation() -> list[tuple[str, str, str, str, str]]:
     return out
 
 
+RANDOM_BASELINE = R / "random_baseline.json"
+
+
 def random_tagging_map(n_trials: int = 20) -> float:
     """随机打分在测试集上的 mAP。多标签任务里它约等于平均正例率，
-    但这里**实测**而不是用近似 —— 近似值我凭印象写成 0.06，实测是 0.0681。"""
+    但这里**实测**而不是用近似 —— 近似值我凭印象写成 0.06，实测是 0.0681。
+
+    **读持久化结果，不再每次从原始音频重算。** 本机数据已迁到云上并删除，
+    总览脚本若依赖原始音频就会在删除后直接崩溃（删除前模拟过：确实会崩）。
+    只有结果文件不存在、且本地数据还在时，才计算一次并写入。
+    数字仍然是脚本算出来的，不是手写的。
+    """
+    if RANDOM_BASELINE.exists():
+        return float(json.loads(RANDOM_BASELINE.read_text(encoding="utf-8"))["map"])
+
     from src.datasets.jamendo import DEFAULT_ROOT, load_split
     from src.eval.tagging import macro_average_precision, valid_tag_mask
 
@@ -62,9 +74,17 @@ def random_tagging_map(n_trials: int = 20) -> float:
     y = vocab.encode(parts["test"])
     keep = valid_tag_mask(y)
     rng = np.random.default_rng(0)
-    return float(np.mean([macro_average_precision(y[:, keep],
-                                                  rng.random((y.shape[0], keep.sum())))
-                          for _ in range(n_trials)]))
+    value = float(np.mean([macro_average_precision(y[:, keep],
+                                                   rng.random((y.shape[0], keep.sum())))
+                           for _ in range(n_trials)]))
+    RANDOM_BASELINE.write_text(json.dumps({
+        "map": value, "n_trials": n_trials, "seed": 0,
+        "subset": "autotagging_top50tags", "split": 0,
+        "n_test_tracks": int(y.shape[0]), "n_valid_tags": int(keep.sum()),
+        "note": "随机打分的测试集 mAP；测试集为当时本地可用的 10 块（00-09）子集",
+        "generated_by": "scripts/build_summary.py:random_tagging_map",
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    return value
 
 
 def load(name: str) -> dict | None:
